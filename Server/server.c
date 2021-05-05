@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "../utils_v10.h"
+#include "../communications.h"
 
 #define BACKLOG 5
 #define SERVER_PORT 9502
@@ -32,9 +33,10 @@ int initSocketServer(int port) {
 void socketHandler(void* arg1) {
     int newsockfd = *(int *)arg1;
     printf("Numéro du socket dans fils : %d\n",newsockfd);
-    char msg[10];
-    sread(newsockfd,msg,sizeof(msg));
+    CommunicationClientServer msg;
+    sread(newsockfd,&msg,sizeof(msg));
     printf("message du client : %s\n",msg);
+
 }
 
 int main (int argc, char ** argv){
