@@ -1,7 +1,7 @@
 CC=gcc
 CCFLAGS=-D_DEFAULT_SOURCE -D_XOPEN_SOURCE -D_BSD_SOURCE -std=c11 -pedantic -Wvla -Wall -Werror
 
-all: server
+all: maint stat
 
 server : server.o utils_v10.o
 	$(CC) $(CCFLAGS) -o server server.o utils_v10.o
@@ -29,14 +29,15 @@ server.o: Server/server.c utils_v10.h
 client.o: Client/client.c utils_v10.h
 	$(CC) $(CCFLAGS) -c Client/client.c
 
-maint.o: Server/maint.c utils_v10.h
+maint.o: Server/maint.c utils_v10.h Server/ipc_conf.h
 	$(CC) $(CCFLAGS) -c Server/maint.c
 
-stat.o: Server/stat.c utils_v10.h
+stat.o: Server/stat.c utils_v10.h Server/ipc_conf.h
 	$(CC) $(CCFLAGS) -c Server/stat.c
 
 utils_v10.o: utils_v10.c utils_v10.h
 	$(CC) $(CCFLAGS) -c utils_v10.c 
+
 
 clear :
 	clear

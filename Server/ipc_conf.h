@@ -1,9 +1,12 @@
 #ifndef IPC_CONF_H
+
+#include <stdbool.h>
+
 #define IPC_CONF_H
 
 #define PERM 0666
 
-#define MEMORY_KEY 1
+#define SHARED_MEMORY_KEY 1
 
 #define SEM_KEY 2
 
@@ -20,7 +23,7 @@ typedef struct {
 
 typedef struct {
 	int numberOfPrograms;
-	StructProgram[1000] structProgram;
+	StructProgram structProgram[1000];
 } MainStruct;
 
 
