@@ -1,3 +1,9 @@
+#include <sys/types.h>
+#include <sys/shm.h> 
+#include <sys/ipc.h>
+
+
+
 
 
 #include "ipc_conf.h"
@@ -7,31 +13,33 @@
 // MAIN FUNCTION
 //******************************************************************************
 int main (int argc, char *argv[]) {
-  int shid;
-  int sid;
   if(argc < 2){
     perror("Un argument est attendu.");
+    exit(1);
   } 
-  // exit?
-  if(argv[1] == 1){
+
+  if(atoi(argv[1]) == 1){
     // shared memory
-    shid = sshmget(MEMORY_KEY, 1000 * sizeof(int), IPC_CREAT | PERM);
+    sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), IPC_CREAT | PERM);
+    // semaphore
+    sem_create(SEM_KEY, 1, PERM, 1);
 
-    // semaphores
-    sid = sem_create(SEM_KEY, 2);
+  } else if(atoi(argv[1]) == 2){
+    int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), IPC_CREAT | PERM);
+    int sid = sem_get(SEM_KEY, 1);
 
-  } else if(argv[1] == 2){
     sshmdelete(shid);
     sem_delete(sid);
 
-  } else if(argv[1] == 3){
+  } else if(atoi(argv[1]) == 3){
     if(argc != 3){
       perror("Une durée est nécessaire afin de réserver la mémoire de façon exclusive.");
+      exit(1);
     }
-    //exit?
-    sem_down0(sem_id);
-    sleep(argv[2]); 
-    sem_up0(sem_id);
+    int sid = sem_get(SEM_KEY, 1);
+    sem_down0(sid);
+    sleep(atoi(argv[2])); 
+    sem_up0(sid);
 
   }
   
