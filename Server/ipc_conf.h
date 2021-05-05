@@ -7,6 +7,22 @@
 
 #define SEM_KEY 2
 
+#define MAX_NAME 20
+
+
+typedef struct {
+  int num;
+  char name[MAX_NAME];
+  bool errorCompil;
+  int numberOfExecutions;
+  int time;
+} StructProgram;
+
+typedef struct {
+	int numberOfPrograms;
+	StructProgram[1000] structProgram;
+} MainStruct;
+
 
 
 #endif

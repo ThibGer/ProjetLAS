@@ -1,3 +1,9 @@
+#include <sys/types.h>
+#include <sys/shm.h> 
+#include <sys/ipc.h>
+
+
+
 
 
 #include "ipc_conf.h"
@@ -15,7 +21,7 @@ int main (int argc, char *argv[]) {
   // exit?
   if(argv[1] == 1){
     // shared memory
-    shid = sshmget(MEMORY_KEY, 1000 * sizeof(int), IPC_CREAT | PERM);
+    shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), IPC_CREAT | PERM);
 
     // semaphores
     sid = sem_create(SEM_KEY, 2);
@@ -29,9 +35,9 @@ int main (int argc, char *argv[]) {
       perror("Une durée est nécessaire afin de réserver la mémoire de façon exclusive.");
     }
     //exit?
-    sem_down0(sem_id);
+    sem_down0(sid);
     sleep(argv[2]); 
-    sem_up0(sem_id);
+    sem_up0(sid);
 
   }
   
