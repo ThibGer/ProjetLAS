@@ -23,7 +23,7 @@ stat : stat.o utils_v10.o
 	mv stat.o Server/
 	mv stat Server/
 
-server.o: Server/server.c utils_v10.h communications.h
+server.o: Server/server.c utils_v10.h communications.h Server/ipc_conf.h
 	$(CC) $(CCFLAGS) -c Server/server.c
 
 client.o: Client/client.c utils_v10.h communications.h
