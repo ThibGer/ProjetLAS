@@ -3,7 +3,6 @@
 
 typedef struct {
     int num;
-    char* file;
     int nbCharFilename;
     char filename[255];
 } CommunicationClientServer;

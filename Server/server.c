@@ -30,6 +30,21 @@ int initSocketServer(int port) {
 }
 
 
+void saveFile(int sockfd, char[255]fileName, int nbCharFileName){
+  char[1000] buffer;
+  int fd = sopen("./CodeDirectory/"+fileName, O_WRONLY | O_APPEND | O_CREAT, 0200);
+  
+  while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
+    nwrite(fd,buffer,strlen(buffer));
+  }
+  sclose(fd);
+}
+
+
+
+
+
+
 void socketHandler(void* arg1) {
     int newsockfd = *(int *)arg1;
     printf("Numéro du socket dans fils : %d\n",newsockfd);
