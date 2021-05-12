@@ -4,6 +4,27 @@
 #include "utils_v10.h"
 
 
+
+
+//upload à mettre dans client.c
+void uploadFile(int sockfd, char* pathFile){
+  int fd = sopen(pathFile,O_RDONLY,0100);
+
+  char[1000] buffer;
+  while(sread(fd,&buffer,sizeof(buffer)) != 0){
+    swrite(sockfd,buffer,sizeof(buffer));
+  }
+  int s = shutdown(sockfd,SHUT_RD); //A VOIR POUR PEUT ETRE DISALLOWED SHUT-RDWR
+  checkNeg(s, "ERROR SHUTDOWN");
+
+  sclose(fd);
+}
+
+
+
+
+
+
 //***************************************************************************
 // TERMIINAL
 //***************************************************************************
