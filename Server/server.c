@@ -3,6 +3,7 @@
 
 #include "../utils_v10.h"
 #include "../communications.h"
+#include "ipc_conf.h"
 
 #define BACKLOG 5
 #define SERVER_PORT 9502
@@ -50,6 +51,8 @@ void socketHandler(void* arg1) {
 }
 
 int main (int argc, char ** argv){
+    //chdir("./CodeDirectory");
+    //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
     int sockfd, newsockfd;
 
     //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
