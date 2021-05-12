@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <signal.h>
 
 #include "utils_v10.h"
+
+#define BUFFERSIZE 300
+
+volatile sig_atomic_t end = 0;
 
 
 
@@ -50,8 +57,47 @@ int main(int argc, char **argv){
 	ret = close(pipefd[0]);
 	checkNeg(ret, "close error");
 
-	/*TODO: prompt*/
-	while()
+	/* read on stdin */
+	char bufRd[BUFFERSIZE];
+	int nbCharRd = sread(0, bufRd, BUFFERSIZE);
+	char command = bufRd[0];
+	bufRd[nbCharRd-1] = '\0';
+	char* param = bufRd+2;
+
+	/* prompt */
+	while(command != 'q') {
+		//add a C file to the server
+		if (command == '+'){
+			;
+		}
+		//replace a C file to the server
+		if (command == '.'){
+			char* spaceAddress =strtok(param, ' ');
+			char* filePath = spaceAddress+1;
+			*spaceAddress = '\0';
+			int num = atoi(param);
+			/*TODO: envoi struct(num, NULL, NULL) à server)*/;
+		}
+		//add a progNum in RecurExec
+		if (command == '*'){
+			int num = atoi(param);
+			swrite(pipefd[1], &num, sizeof(int));
+		}
+		//exec once a progNum
+		if (command == '@'){
+			int num = atoi(param);
+			/*TODO: execution (envoi struct(num, NULL, NULL) à server)*/;
+		}
+
+		/* read on stdin */
+		nbCharRd = sread(0, bufRd, BUFFERSIZE);
+		command = bufRd[0];
+		bufRd[nbCharRd-1] = '\0';
+		param = bufRd+2;
+	}
+
+	ssigaction(SIGUSR1, sigusr1_handler);
+	skill(timer, SIGUSR1);
 
 
 	//close write
@@ -59,6 +105,11 @@ int main(int argc, char **argv){
 	checkNeg(ret, "close error");
 
 	return 0;
+}
+
+
+void sigusr1_handler() {
+  end = 1;
 }
 
 
@@ -76,7 +127,7 @@ void timer(void *arg1, void* arg2) {
 	int ret = close(pipefd[0]);
 	checkNeg(ret, "close error");
 
-	while (/*TODO: pas de signal reçu*/) {
+	while (end == 0) {
 		sleep(delay);
 		swrite(pipefd[1], &heartBit, sizeof(int));
 	}
