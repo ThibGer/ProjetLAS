@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "utils_v10.h"
 
@@ -17,7 +19,7 @@ volatile sig_atomic_t end = 0;
 void uploadFile(int sockfd, char* pathFile){
   int fd = sopen(pathFile,O_RDONLY,0100);
 
-  char[1000] buffer;
+  char buffer[1000];
   while(sread(fd,&buffer,sizeof(buffer)) != 0){
     swrite(sockfd,buffer,sizeof(buffer));
   }
