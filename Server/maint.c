@@ -2,10 +2,6 @@
 #include <sys/shm.h> 
 #include <sys/ipc.h>
 
-
-
-
-
 #include "ipc_conf.h"
 #include "../utils_v10.h"
 
