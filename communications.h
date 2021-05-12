@@ -4,7 +4,18 @@
 typedef struct {
     int num;
     char* file;
-    char* filename;
+    int nbCharFilename;
+    char filename[255];
 } CommunicationClientServer;
+
+typedef struct {
+    int num;
+    int isCompiled;
+    char errorMessage[255];
+    int state;
+    int executionTime;
+    int returnCode;
+    char standardOutput[255];
+} CommunicationServerClient;
 
 #endif
