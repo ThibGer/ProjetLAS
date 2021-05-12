@@ -10,11 +10,65 @@
 #define BUFFERSIZE 300
 
 volatile sig_atomic_t end = 0;
+char* adr;
+int port;
+//TODO: Verif declarat° variable globale + passage param inutile
+
+
+int initSocket() {
+	//TODO
+}
 
 
 
+void addFile(char* filePath) {
+	int sockfd = initSocket();
 
-//upload à mettre dans client.c
+
+	char* fileName = strchr(filePath, int c'/')+1;
+			
+	CommunicationClientServer msg;
+	msg.nbCharFilename = strlen(fileName);
+	msg.filename[0] = fileName;
+	swrite(sockfd,&msg,sizeof(msg));
+
+	uploadFile(sockfd, filePath)
+
+	/*TODO: print ServerResponse*/
+}
+
+
+void replaceFile(int num, char* filePath) {
+	int sockfd = initSocket();
+
+
+	char* fileName = strchr(filePath, int c'/')+1;
+			
+	CommunicationClientServer msg;
+	msg.num = num;
+	msg.nbCharFilename = strlen(fileName);
+	msg.filename[0] = fileName;
+	swrite(sockfd,&msg,sizeof(msg));
+
+	uploadFile(sockfd, filePath)
+
+	/*TODO: print ServerResponse*/
+}
+
+
+void execProg(int num) {
+	int sockfd = initSocket();
+
+
+	CommunicationClientServer msg;
+	msg.num = num;
+	swrite(sockfd,&msg,sizeof(msg));
+
+	/*TODO: print ServerResponse*/
+}
+
+
+
 void uploadFile(int sockfd, char* pathFile){
   int fd = sopen(pathFile,O_RDONLY,0100);
 
@@ -32,15 +86,14 @@ void uploadFile(int sockfd, char* pathFile){
 
 
 
-
 //***************************************************************************
 // TERMIINAL
 //***************************************************************************
 
 int main(int argc, char **argv){
 
-	char* adr = argv[0];
-	int port = atoi(argv[1]);
+	adr = argv[0];
+	port = atoi(argv[1]);
 	int delay = atoi(argv[2]);
 
 	/* create pipe */
@@ -68,38 +121,28 @@ int main(int argc, char **argv){
 	/* prompt */
 	while(command != 'q') {
 		//add a C file to the server
-		if (command == '+'){
-			//strChar rech filename in filePath;
+		if (command == '+') {
+			addFile(param);
 		}
 		//replace a C file to the server
-		if (command == '.'){
+		if else (command == '.') {
 			//split 2 param
 			char* spaceAddress = strtok(param, ' ');
 			char* filePath = spaceAddress+1;
 			*spaceAddress = '\0';
 			int num = atoi(param);
 
-			char* fileName = strchr(filepath, int c'/')+1;
-			char* file = //TODO;
-			
-			CommunicationServerClient msg;
-			msg.num = num;
-			msg.file = file;
-			msg.nbCharFilename = strlen(fileName);
-			msg.filename[0] = fileName;
-			/*TODO: envoi struct(num, NULL, NULL) à server)*/;
+			replaceFile(num, filePath);
 		}
 		//add a progNum in RecurExec
-		if (command == '*'){
+		if else (command == '*') {
 			int num = atoi(param);
 			swrite(pipefd[1], &num, sizeof(int));
 		}
 		//exec once a progNum
-		if (command == '@'){
+		if else (command == '@') {
 			int num = atoi(param);
-			CommunicationServerClient msg;
-			msg.num = num;
-			/*TODO: execution (envoi struct à server)*/;
+			execProg(num);
 		}
 
 		/* read on stdin */
@@ -174,14 +217,14 @@ void recurExec(void *arg1, void* arg2, void* arg3) {
 
 	while(szIntRd > 0){
 		if (num < 0) {
-			CommunicationServerClient msg;
-			msg.num = num;
-			/*TODO: execution (envoi struct à server)*/;
+			for (int i = 0; i < nbProgs; ++i) {
+				execProg(progs[i]);
+			}			
 		}
 		else {
 			//command * (add a progNum in RecurExec)
 			progs[nbProgs] = num;
-			progNum++;
+			nbProgs++;
 		}
 	}
 
