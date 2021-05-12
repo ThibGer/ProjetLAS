@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "../utils_v10.h"
 #include "../communications.h"
@@ -31,9 +34,9 @@ int initSocketServer(int port) {
 }
 
 
-void saveFile(int sockfd, char[255]fileName, int nbCharFileName){
-  char[1000] buffer;
-  int fd = sopen("./CodeDirectory/"+fileName, O_WRONLY | O_APPEND | O_CREAT, 0200);
+void saveFile(int sockfd, char fileName[255], int nbCharFileName){
+  char buffer[1000];
+  int fd = sopen("./CodeDirectory/"/*+fileName*/, O_WRONLY | O_APPEND | O_CREAT, 0200);
   
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
     nwrite(fd,buffer,strlen(buffer));
@@ -41,33 +44,46 @@ void saveFile(int sockfd, char[255]fileName, int nbCharFileName){
   sclose(fd);
 }
 
-
-
-
+void execProgram(void* arg1){
+    char* num = (char *)arg1;
+    sexecl(num,num, NULL);
+}
 
 
 void socketHandler(void* arg1) {
     int newsockfd = *(int *)arg1;
     printf("Numéro du socket dans fils : %d\n",newsockfd);
     CommunicationClientServer clientMsg;
-    //CommunicationServerClient serverMsg;
+    CommunicationServerClient serverMsg;
     sread(newsockfd,&clientMsg,sizeof(clientMsg));
     //Ajout fichier (+)
-    if(&clientMsg.num == NULL && clientMsg.file != NULL && clientMsg.filename != NULL){
+    if(&clientMsg.num == NULL && clientMsg.filename != NULL){
         
     //Remplacer programme (.)
-    } else if (&clientMsg.num != NULL && clientMsg.num != -2 && clientMsg.file != NULL && clientMsg.filename != NULL){
+    } else if (&clientMsg.num != NULL && clientMsg.filename != NULL){
         
     //Executer programme (*,@)
-    } else if (&clientMsg.num != NULL && clientMsg.file == NULL && clientMsg.filename == NULL){
-
+    } else if (&clientMsg.num != NULL && clientMsg.filename == NULL){
+        void *ptr = &clientMsg.num;
+        fork_and_run1(execProgram,ptr);
+        /*serverMsg.num = clientMsg.num;
+        serverMsg.state;
+        serverMsg.executionTime;
+        serverMsg.returnCode;
+        serverMsg.standardOutput;*/
+        swrite(newsockfd, &serverMsg,sizeof(serverMsg));
     } 
 
 }
 
 int main (int argc, char ** argv){
-    //chdir("./CodeDirectory");
+    chdir("./CodeDirectory");
+    //char s[100];
+    // printing current working directory
     //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
+    //printf("%s\n", getcwd(s, 100));
+    int ret = sexecl("helloWorld","helloWorld", NULL);
+    printf("%d\n",ret);
     int sockfd, newsockfd;
 
     //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
