@@ -33,9 +33,19 @@ int initSocketServer(int port) {
 void socketHandler(void* arg1) {
     int newsockfd = *(int *)arg1;
     printf("Numéro du socket dans fils : %d\n",newsockfd);
-    CommunicationClientServer msg;
-    sread(newsockfd,&msg,sizeof(msg));
-    printf("message du client : %s\n",msg);
+    CommunicationClientServer clientMsg;
+    //CommunicationServerClient serverMsg;
+    sread(newsockfd,&clientMsg,sizeof(clientMsg));
+    //Ajout fichier (+)
+    if(&clientMsg.num == NULL && clientMsg.file != NULL && clientMsg.filename != NULL){
+        
+    //Remplacer programme (.)
+    } else if (&clientMsg.num != NULL && clientMsg.num != -2 && clientMsg.file != NULL && clientMsg.filename != NULL){
+        
+    //Executer programme (*,@)
+    } else if (&clientMsg.num != NULL && clientMsg.file == NULL && clientMsg.filename == NULL){
+
+    } 
 
 }
 
