@@ -5,6 +5,7 @@
 #include <signal.h>
 
 #include "utils_v10.h"
+#include "../communications.h"
 
 #define BUFFERSIZE 300
 
@@ -47,14 +48,24 @@ int main(int argc, char **argv){
 	while(command != 'q') {
 		//add a C file to the server
 		if (command == '+'){
-			;
+			//strChar rech filename in filePath;
 		}
 		//replace a C file to the server
 		if (command == '.'){
-			char* spaceAddress =strtok(param, ' ');
+			//split 2 param
+			char* spaceAddress = strtok(param, ' ');
 			char* filePath = spaceAddress+1;
 			*spaceAddress = '\0';
 			int num = atoi(param);
+
+			char* fileName = strchr(filepath, int c'/')+1;
+			char* file = //TODO;
+			
+			CommunicationServerClient msg;
+			msg.num = num;
+			msg.file = file;
+			msg.nbCharFilename = strlen(fileName);
+			msg.filename[0] = fileName;
 			/*TODO: envoi struct(num, NULL, NULL) à server)*/;
 		}
 		//add a progNum in RecurExec
@@ -65,7 +76,9 @@ int main(int argc, char **argv){
 		//exec once a progNum
 		if (command == '@'){
 			int num = atoi(param);
-			/*TODO: execution (envoi struct(num, NULL, NULL) à server)*/;
+			CommunicationServerClient msg;
+			msg.num = num;
+			/*TODO: execution (envoi struct à server)*/;
 		}
 
 		/* read on stdin */
@@ -139,8 +152,11 @@ void recurExec(void *arg1, void* arg2, void* arg3) {
 	int szIntRd = sread(pipefd[0], &num, sizeof(int));
 
 	while(szIntRd > 0){
-		if (num < 0)
-			/*TODO: execution (envoi struct(num, NULL, NULL) à server)*/;
+		if (num < 0) {
+			CommunicationServerClient msg;
+			msg.num = num;
+			/*TODO: execution (envoi struct à server)*/;
+		}
 		else {
 			//command * (add a progNum in RecurExec)
 			progs[nbProgs] = num;
