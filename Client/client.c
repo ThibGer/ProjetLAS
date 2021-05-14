@@ -12,38 +12,39 @@
 #define BUFFERSIZE 300
 
 volatile sig_atomic_t end = 0;
-char* adr;
-int port;
-//TODO: Verif declarat° variable globale + passage param inutile
 
 
-int initSocket() {
-	//TODO
+// PRE: ServierIP : a valid IP address
+//      ServerPort: a valid port number
+// POST: on success connects a client socket to ServerIP:port
+//       return socket file descriptor
+//       on failure, displays error cause and quits the program
+int initSocketClient(char ServerIP[16], int Serverport) 
+{
+  int sockfd = ssocket();
+  sconnect(ServerIP, Serverport, sockfd);
+  return sockfd;
 }
 
 
 
-void addFile(char* filePath) {
-	int sockfd = initSocket();
-
-
-	char* fileName = strchr(filePath, int c'/')+1;
+void addFile(int sockfd,char* filePath) {
+	char* fileName = strrchr(filePath, '/')+1;
 			
 	CommunicationClientServer msg;
 	msg.nbCharFilename = strlen(fileName);
 	msg.filename[0] = fileName;
 	swrite(sockfd,&msg,sizeof(msg));
 
-	uploadFile(sockfd, filePath)
+	uploadFile(sockfd, filePath);
 
-	/*TODO: print ServerResponse*/
+	CommunicationServerClient serverMsg;
+	sread(sockfd,&serverMsg,sizeof(serverMsg));
+	printf("Réponse du serveur: %s\n", serverMsg.message);
 }
 
 
-void replaceFile(int num, char* filePath) {
-	int sockfd = initSocket();
-
-
+void replaceFile(int sockfd, int num, char* filePath) {
 	char* fileName = strchr(filePath, int c'/')+1;
 			
 	CommunicationClientServer msg;
@@ -52,21 +53,22 @@ void replaceFile(int num, char* filePath) {
 	msg.filename[0] = fileName;
 	swrite(sockfd,&msg,sizeof(msg));
 
-	uploadFile(sockfd, filePath)
+	uploadFile(sockfd, filePath);
 
-	/*TODO: print ServerResponse*/
+	CommunicationServerClient serverMsg;
+	sread(sockfd,&serverMsg,sizeof(serverMsg));
+	printf("Réponse du serveur: %s\n", serverMsg.message);
 }
 
 
-void execProg(int num) {
-	int sockfd = initSocket();
-
-
+void execProg(int sockfd, int num) {
 	CommunicationClientServer msg;
 	msg.num = num;
 	swrite(sockfd,&msg,sizeof(msg));
 
-	/*TODO: print ServerResponse*/
+	CommunicationServerClient serverMsg;
+	sread(sockfd,&serverMsg,sizeof(serverMsg));
+	printf("Réponse du serveur: %s\n", serverMsg.message);
 }
 
 
@@ -93,10 +95,11 @@ void uploadFile(int sockfd, char* pathFile){
 //***************************************************************************
 
 int main(int argc, char **argv){
-
-	adr = argv[0];
-	port = atoi(argv[1]);
+	char adr[16] = argv[0];
+	int port = atoi(argv[1]);
 	int delay = atoi(argv[2]);
+
+	int sockfd = initSocketClient(adr, port);
 
 	/* create pipe */
 	int pipefd[2];
@@ -107,7 +110,7 @@ int main(int argc, char **argv){
 	fork_and_run2(timer, pipefd, &delay);
 
 	/* create child 2 */
-	fork_and_run3(timer, pipefd, &adr, &port);
+	fork_and_run2(timer, pipefd, &sockfd);
 
 	//close read
 	ret = close(pipefd[0]);
@@ -124,27 +127,27 @@ int main(int argc, char **argv){
 	while(command != 'q') {
 		//add a C file to the server
 		if (command == '+') {
-			addFile(param);
+			addFile(sockfd, param);
 		}
 		//replace a C file to the server
-		if else (command == '.') {
+		else if (command == '.') {
 			//split 2 param
 			char* spaceAddress = strtok(param, ' ');
 			char* filePath = spaceAddress+1;
 			*spaceAddress = '\0';
 			int num = atoi(param);
 
-			replaceFile(num, filePath);
+			replaceFile(sockfd, num, filePath);
 		}
 		//add a progNum in RecurExec
-		if else (command == '*') {
+		else if (command == '*') {
 			int num = atoi(param);
 			swrite(pipefd[1], &num, sizeof(int));
 		}
 		//exec once a progNum
-		if else (command == '@') {
+		else if (command == '@') {
 			int num = atoi(param);
-			execProg(num);
+			execProg(sockfd, num);
 		}
 
 		/* read on stdin */
@@ -201,10 +204,9 @@ void timer(void *arg1, void* arg2) {
 // RECUREXEC
 //***************************************************************************
  
-void recurExec(void *arg1, void* arg2, void* arg3) {
+void recurExec(void *arg1, void* arg2) {
 	int *pipefd = arg1;
-	char* adr = *arg2;
-	int port = *(int)arg3;
+	int sockfd = *(int)arg2;
 
 	int num;
 	int progs[100];
@@ -220,7 +222,7 @@ void recurExec(void *arg1, void* arg2, void* arg3) {
 	while(szIntRd > 0){
 		if (num < 0) {
 			for (int i = 0; i < nbProgs; ++i) {
-				execProg(progs[i]);
+				execProg(sockfd, progs[i]);
 			}			
 		}
 		else {
