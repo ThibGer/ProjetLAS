@@ -44,6 +44,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   int sid = sem_get(SEM_KEY, 2);
   sem_down0(sid);
 
+
   //Stock dans la mémoire partagée
   MainStruct *s = sshmat(shid);
   int numberOfPrograms = s->numberOfPrograms;
@@ -70,7 +71,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
 
   //Compilation
   chdir("./CodeDirectory");
-  path= number;
+  path = number;
   strcat(path,".c");
 
   int compil = execl("/usr/bin/gcc","gcc", "-o", number, path, NULL);
