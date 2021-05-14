@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "ipc_conf.h"
 #include "../utils_v10.h"
@@ -48,8 +52,13 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   prog.errorCompil = false;
   prog.numberOfExecutions = 0;
   prog.time = 0;
+  char *path = "./CodeDirectory";
+  char number[10];
+  sprintf(number,"%d",numberOfPrograms);
+  strcat(path,number);
+  strcat(path,".c");
 
-  int fd = sopen("./CodeDirectory/"+numberOfPrograms+".c", O_WRONLY | O_APPEND | O_CREAT, 0200);
+  int fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0200);
   
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
     nwrite(fd,buffer,strlen(buffer));
@@ -74,7 +83,7 @@ void socketHandler(void* arg1) {
     int newsockfd = *(int *)arg1;
     printf("Numéro du socket dans fils : %d\n",newsockfd);
     CommunicationClientServer clientMsg;
-    //CommunicationServerClient serverMsg;
+    CommunicationServerClient serverMsg;
     sread(newsockfd,&clientMsg,sizeof(clientMsg));
     //Ajout fichier (+)
     if(&clientMsg.num == NULL && clientMsg.filename != NULL){
@@ -89,7 +98,7 @@ void socketHandler(void* arg1) {
           iii. Une suite de caractères qui correspond aux messages d’erreur du compilateur*/
 
     //Remplacer programme (.)
-    } else if (&clientMsg.num != NULL && clientMsg.num != -2 && clientMsg.file != NULL && clientMsg.filename != NULL){
+    } else if (&clientMsg.num != NULL && clientMsg.filename != NULL){
         
     //Executer programme (*,@)
     } else if (&clientMsg.num != NULL && clientMsg.filename == NULL){
