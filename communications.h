@@ -10,11 +10,10 @@ typedef struct {
 typedef struct {
     int num;
     int isCompiled;
-    char errorMessage[255];
     int state;
     int executionTime;
     int returnCode;
-    char standardOutput[255];
+    char message[255];
 } CommunicationServerClient;
 
 #endif

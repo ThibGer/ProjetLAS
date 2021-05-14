@@ -44,6 +44,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   int sid = sem_get(SEM_KEY, 2);
   sem_down0(sid);
 
+  //Stock dans la mémoire partagée
   MainStruct *s = sshmat(shid);
   int numberOfPrograms = s->numberOfPrograms;
   StructProgram prog = s->structProgram[numberOfPrograms];
@@ -57,7 +58,6 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   sprintf(number,"%d",numberOfPrograms);
   strcat(path,number);
   strcat(path,".c");
-
   int fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0200);
   
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
@@ -65,9 +65,33 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   }
  
   s->numberOfPrograms ++;
+  CommunicationServerClient serverMsg;
+  serverMsg.isCompiled = 0;
+
+  //Compilation
+  chdir("./CodeDirectory");
+  path= number;
+  strcat(path,".c");
+
+  int compil = execl("/usr/bin/gcc","gcc", "-o", number, path, NULL);
+  if(compil < 0){
+  	  prog.errorCompil = true;
+  	  serverMsg.isCompiled = -1;
+  }
+  //Reponse du serveur
+  serverMsg.num = numberOfPrograms;
+  //serverMsg.message = récupérer la suite de caractères.
+
+
+
+  swrite(sockfd, &serverMsg,sizeof(serverMsg));
+
+  //TODO VOIR AVEC LE EXEC QUI QUITE LE PROG......
   sem_up0(sid);
   sshmdt(s);
   sclose(fd);
+
+
 }
 
 void execProgram(void* arg1){
@@ -91,6 +115,9 @@ void socketHandler(void* arg1) {
         void *arg2 = &clientMsg;
         void *arg3 = &shid;
         fork_and_run3(saveFileHandler,arg1,arg2,arg3);
+
+        
+
 
 
         /*i. Le numéro associé au programme.
@@ -121,8 +148,8 @@ int main (int argc, char ** argv){
     // printing current working directory
     //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
     //printf("%s\n", getcwd(s, 100));
-    int ret = sexecl("helloWorld","helloWorld", NULL);
-    printf("%d\n",ret);
+    //int ret = sexecl("helloWorld","helloWorld", NULL);
+    //printf("%d\n",ret);
     int sockfd, newsockfd;
 
     //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
