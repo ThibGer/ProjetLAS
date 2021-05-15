@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 
 #include "../utils_v10.h"
@@ -46,7 +47,7 @@ void saveFile(int sockfd, char fileName[255], int nbCharFileName){
 
 void execProgram(void* arg1){
     char* num = (char *)arg1;
-    sexecl(num,num, NULL);
+    execl(num,num, NULL);
 }
 
 
@@ -76,30 +77,52 @@ void socketHandler(void* arg1) {
 
 }
 
+/*void testExecHandler () {
+  printf("testExecHandler\n");
+  chdir("./CodeDirectory");
+  int ret = execl("helloWorld", "helloWord", NULL);
+  printf("Retour : %d\n",ret);
+  exit(ret);
+}*/
+
 int main (int argc, char ** argv){
-    chdir("./CodeDirectory");
-    //char s[100];
-    // printing current working directory
-    //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
-    //printf("%s\n", getcwd(s, 100));
-    int ret = sexecl("helloWorld","helloWorld", NULL);
-    printf("%d\n",ret);
-    int sockfd, newsockfd;
+  //char s[100];
+  //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
+  // printing current working directory
+  //printf("%s\n", getcwd(s, 100));
+  /*struct timeval t1;
+  struct timeval t2;
+  gettimeofday(&t1, NULL);
+  pid_t child = fork_and_run0(testExecHandler);
 
-    //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
-    sockfd = initSocketServer(SERVER_PORT);	
-    printf("Le serveur tourne sur le port : %i \n",SERVER_PORT);
+  int status;*/
+  /* pid renvoyé par le wait */
+  /*swaitpid(child, &status, 0);
 
-    while (1){
-        printf("Le serveur attend une connexion\n");
+  gettimeofday(&t2, NULL);
+  int executionTime = (int)(t2.tv_usec - t1.tv_usec);
+  printf("Temps d'execution : %d \n",executionTime);
+  if ( WIFEXITED(status) ){
+    int exit_status = WEXITSTATUS(status);        
+      printf("Exit status of the child was %d\n",exit_status);
+  }*/
 
-        newsockfd = saccept(sockfd);
-        //Si le socket a bien été accepté
-        if (newsockfd > 0 ){
-            printf("Numéro du socket dans parent : %d\n",newsockfd);
-            void *ptr = &newsockfd;
-            pid_t childID = fork_and_run1(socketHandler,ptr);
-            printf("Id du child : %d\n",childID);
-        }
-    }
+  int sockfd, newsockfd;
+
+  //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
+  sockfd = initSocketServer(SERVER_PORT);
+  printf("Le serveur tourne sur le port : %i \n",SERVER_PORT);
+
+  while (1){
+      printf("Le serveur attend une connexion\n");
+
+      newsockfd = saccept(sockfd);
+      //Si le socket a bien été accepté
+      if (newsockfd > 0 ){
+          printf("Numéro du socket dans parent : %d\n",newsockfd);
+          void *ptr = &newsockfd;
+          pid_t childID = fork_and_run1(socketHandler,ptr);
+          printf("Id du child : %d\n",childID);
+      }
+  }
 }
