@@ -62,7 +62,6 @@ void addFile(char* filePath) {
 	strcpy(msg.filename,fileName);
 	msg.num = -1; 			//to distinct with the replace command
 	swrite(sockfd,&msg,sizeof(msg));
-	printf("msg.num client %d\n",msg.num);
 
 	//upload and send the file
 	uploadFile(sockfd, filePath);
@@ -114,15 +113,19 @@ void execProg(int num) {
 	msg.num = num;
 	msg.nbCharFilename = -1;		//to distinct with the add and replace commands
 	swrite(sockfd,&msg,sizeof(msg));
-
+	
 	CommunicationServerClient serverMsg;
+	char stdoutMsg[255];
+	sread(sockfd,&stdoutMsg,sizeof(stdoutMsg));
+	
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
 	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   État du programme: %d\n", serverMsg.state);
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
-	printf("   Sortie standard: \n\n %s\n", serverMsg.message);
+	printf("   Sortie standard: \n " );
+	printf("   %s\n",stdoutMsg);
 	printf("\n   ----------------------------------------------- \n\n");
 }
 

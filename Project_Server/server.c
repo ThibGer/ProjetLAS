@@ -69,7 +69,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   printf("Apres nwrite");
   s->numberOfPrograms ++;
   CommunicationServerClient serverMsg;
-  serverMsg.isCompiled = 0;
+  //serverMsg.isCompiled = 0;
 
   //Compilation
   /*chdir("./CodeDirectory");
@@ -136,6 +136,7 @@ void socketHandler(void* arg1) {
   //Executer programme (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
     printf("On execute\n");
+    int dupFd = -1;
     chdir("./CodeDirectory");
     struct stat statStruct;
     char progName[3];
@@ -145,13 +146,16 @@ void socketHandler(void* arg1) {
     //Si le fichier n'existe pas
     if(fileExist < 0){
       serverMsg.state = -2;
-
+      serverMsg.executionTime = -1;
+      serverMsg.returnCode = -1;
     // TODO VOIR SI FICHIER COMPILE DANS MEMOIRE PARTAGEE
     } else {
       void *ptr = &progName;
       struct timeval t1;
       struct timeval t2;
       gettimeofday(&t1, NULL);
+      //Redirige StdOut vers le socket
+      dupFd = dup2(newsockfd,1);
       pid_t child = fork_and_run1(execProgram,ptr);
 
       int status;
@@ -171,11 +175,13 @@ void socketHandler(void* arg1) {
       //TODO A REMPLACER PAR STDOUT
       char* message = "Message Bidon";
       strcpy(serverMsg.message,message);
+
     }
     serverMsg.num = clientMsg.num;
-
     swrite(newsockfd, &serverMsg,sizeof(serverMsg));
-    } 
+    if(dupFd != -1)
+      sclose(dupFd);
+    }
 
 
 }
