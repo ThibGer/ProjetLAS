@@ -68,11 +68,11 @@ void addFile(char* filePath) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
+	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
 	printf("   message d'erreur: \n\n %s\n", serverMsg.message);
-	printf("\n   ----------------------------------------------- \n\n");
+	printf("\n-----------------------------------------------\n\n");
 }
 
 
@@ -96,11 +96,11 @@ void replaceFile(int num, char* filePath) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
+	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
 	printf("   message d'erreur: \n\n %s\n", serverMsg.message);
-	printf("\n   ----------------------------------------------- \n\n");
+	printf("\n----------------------------------------------- \n\n");
 }
 
 
@@ -119,14 +119,14 @@ void execProg(int num) {
 	sread(sockfd,&stdoutMsg,sizeof(stdoutMsg));
 	
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
+	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   État du programme: %d\n", serverMsg.state);
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
-	printf("   Sortie standard: \n " );
-	printf("   %s\n",stdoutMsg);
-	printf("\n   ----------------------------------------------- \n\n");
+	printf("   Sortie standard: \n\n");
+	printf("%s\n",stdoutMsg);
+	printf("\n-----------------------------------------------\n");
 }
 
 
