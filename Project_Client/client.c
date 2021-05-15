@@ -36,7 +36,7 @@ int initSocketClient(char ServerIP[16], int Serverport) {
 void uploadFile(int sockfd, char* filePath){
   int fd = sopen(filePath,O_RDONLY,0100);
 
-  char buffer[1000];
+  char buffer[BUFFERSIZE];
   while(sread(fd,&buffer,sizeof(buffer)) != 0){
     swrite(sockfd,buffer,sizeof(buffer));
   }
@@ -114,10 +114,17 @@ void execProg(int num) {
 	msg.nbCharFilename = -1;		//to distinct with the add and replace commands
 	swrite(sockfd,&msg,sizeof(msg));
 	
-	CommunicationServerClient serverMsg;
-	char stdoutMsg[255];
+	/*char* stdoutMsg = malloc(1);
+	char buffer[BUFFERSIZE];
+	while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
+		int size = strlen(stdoutMsg) + strlen(buffer);
+		realloc(stdoutMsg, size);
+		strcat(stdoutMsg, buffer);
+	}*/
+	char stdoutMsg[BUFFERSIZE];
 	sread(sockfd,&stdoutMsg,sizeof(stdoutMsg));
-	
+
+	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
@@ -125,7 +132,7 @@ void execProg(int num) {
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
 	printf("   Sortie standard: \n\n");
-	printf("%s\n",stdoutMsg);
+	printf("%s\n", stdoutMsg);
 	printf("\n-----------------------------------------------\n");
 }
 
