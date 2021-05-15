@@ -15,17 +15,20 @@ int main (int argc, char *argv[]) {
 	}
 
 	int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
-	int sid = sem_get(SEM_KEY, 2);
-
+	int sid = sem_get(SEM_KEY, 1);
+	printf("sid %d\n",sid);
 	sem_down0(sid);
+	printf("je suis passé\n");
  	MainStruct *s = sshmat(shid);
- 	StructProgram prog = s->structProgram[atoi(argv[2])];
- 	printf("%d",prog.num);
- 	printf("%s",prog.name);
- 	printf("%d",prog.errorCompil);
- 	printf("%d",prog.numberOfExecutions);
- 	printf("%d",prog.time);
+ 	StructProgram prog = s->structProgram[atoi(argv[1])];
+
+ 	printf("Numero du programme : %d\n",prog.num);
+ 	printf("Nom du programme : %s\n",prog.name);
+ 	printf("Erreur de compilation : %d\n",prog.errorCompil);
+ 	printf("Nombre d'éxécutions du programme : %d\n",prog.numberOfExecutions);
+ 	printf("Temps cumulés (microsecondes) : %d\n",prog.time);
 
  	sshmdt(s);
  	sem_up0(sid);
+ 	//exit(0);
 }
