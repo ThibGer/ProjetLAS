@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
 
+#include "ipc_conf.h"
 #include "../utils_v10.h"
 #include "../communications.h"
-#include "ipc_conf.h"
 
 #define BACKLOG 5
 #define SERVER_PORT 9502
@@ -35,14 +36,64 @@ int initSocketServer(int port) {
 }
 
 
-void saveFile(int sockfd, char fileName[255], int nbCharFileName){
+void saveFileHandler(void* arg1, void* arg2, void* arg3){
+  int sockfd = *(int*)arg1;
+  CommunicationClientServer clientMsg = *(CommunicationClientServer*)arg2;
+  int shid = *(int*)arg3;
   char buffer[1000];
-  int fd = sopen("./CodeDirectory/"/*+fileName*/, O_WRONLY | O_APPEND | O_CREAT, 0200);
+
+  int sid = sem_get(SEM_KEY, 2);
+  sem_down0(sid);
+
+
+  //Stock dans la mémoire partagée
+  MainStruct *s = sshmat(shid);
+  int numberOfPrograms = s->numberOfPrograms;
+  StructProgram prog = s->structProgram[numberOfPrograms];
+  prog.num = numberOfPrograms;
+  strcpy(prog.name,clientMsg.filename);
+  prog.errorCompil = false;
+  prog.numberOfExecutions = 0;
+  prog.time = 0;
+  char *path = "./CodeDirectory";
+  char number[10];
+  sprintf(number,"%d",numberOfPrograms);
+  strcat(path,number);
+  strcat(path,".c");
+  int fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0200);
   
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
     nwrite(fd,buffer,strlen(buffer));
   }
+ 
+  s->numberOfPrograms ++;
+  CommunicationServerClient serverMsg;
+  serverMsg.isCompiled = 0;
+
+  //Compilation
+  chdir("./CodeDirectory");
+  path = number;
+  strcat(path,".c");
+
+  int compil = execl("/usr/bin/gcc","gcc", "-o", number, path, NULL);
+  if(compil < 0){
+  	  prog.errorCompil = true;
+  	  serverMsg.isCompiled = -1;
+  }
+  //Reponse du serveur
+  serverMsg.num = numberOfPrograms;
+  //serverMsg.message = récupérer la suite de caractères.
+
+
+
+  swrite(sockfd, &serverMsg,sizeof(serverMsg));
+
+  //TODO VOIR AVEC LE EXEC QUI QUITE LE PROG......
+  sem_up0(sid);
+  sshmdt(s);
   sclose(fd);
+
+
 }
 
 void execProgram(void* arg1){
@@ -52,6 +103,9 @@ void execProgram(void* arg1){
 
 
 void socketHandler(void* arg1) {
+    //Get shared memory
+    int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
+
     int newsockfd = *(int *)arg1;
     printf("Numéro du socket dans fils : %d\n",newsockfd);
     CommunicationClientServer clientMsg;
@@ -59,7 +113,19 @@ void socketHandler(void* arg1) {
     sread(newsockfd,&clientMsg,sizeof(clientMsg));
     //Ajout fichier (+)
     if(&clientMsg.num == NULL && clientMsg.filename != NULL){
+        void *arg1 = &newsockfd;
+        void *arg2 = &clientMsg;
+        void *arg3 = &shid;
+        fork_and_run3(saveFileHandler,arg1,arg2,arg3);
+
         
+
+
+
+        /*i. Le numéro associé au programme.
+          ii. 0 si le programme compile, un nombre différent de 0 sinon.
+          iii. Une suite de caractères qui correspond aux messages d’erreur du compilateur*/
+
     //Remplacer programme (.)
     } else if (&clientMsg.num != NULL && clientMsg.filename != NULL){
         
@@ -74,6 +140,7 @@ void socketHandler(void* arg1) {
         serverMsg.standardOutput;*/
         swrite(newsockfd, &serverMsg,sizeof(serverMsg));
     } 
+
 
 }
 
