@@ -1,3 +1,7 @@
 *.o
 Server/*
 Client/*
+Project_Client/client
+Project_Server/maint
+Project_Server/server
+Project_Server/stat
