@@ -71,7 +71,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   serverMsg.isCompiled = 0;
 
   //Compilation
-  chdir("./CodeDirectory");
+  /*chdir("./CodeDirectory");
   path = number;
   strcat(path,".c");
 
@@ -79,7 +79,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   if(compil < 0){
   	  prog.errorCompil = true;
   	  serverMsg.isCompiled = -1;
-  }
+  }*/
   //Reponse du serveur
   serverMsg.num = numberOfPrograms;
   //serverMsg.message = récupérer la suite de caractères.
@@ -97,48 +97,73 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
 }
 
 void execProgram(void* arg1){
-    char* num = (char *)arg1;
-    execl(num,num, NULL);
+  int num = *(int *)arg1;
+  char progName[4];
+  sprintf(progName, "%d", num);
+  chdir("./CodeDirectory");
+  int ret = execl(progName,progName, NULL);
+  printf("Retour : %d\n",ret);
+  exit(ret);
 }
 
 
 void socketHandler(void* arg1) {
-    //Get shared memory
-    int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
+  //Get shared memory
+  int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
 
-    int newsockfd = *(int *)arg1;
-    printf("Numéro du socket dans fils : %d\n",newsockfd);
-    CommunicationClientServer clientMsg;
-    CommunicationServerClient serverMsg;
-    sread(newsockfd,&clientMsg,sizeof(clientMsg));
-    //Ajout fichier (+)
-    if(&clientMsg.num == NULL && clientMsg.filename != NULL){
-        void *arg1 = &newsockfd;
-        void *arg2 = &clientMsg;
-        void *arg3 = &shid;
-        fork_and_run3(saveFileHandler,arg1,arg2,arg3);
+  int newsockfd = *(int *)arg1;
+  printf("Numéro du socket dans fils : %d\n",newsockfd);
+  CommunicationClientServer clientMsg;
+  CommunicationServerClient serverMsg;
+  sread(newsockfd,&clientMsg,sizeof(clientMsg));
+  //Ajout fichier (+)
+  if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
+    printf("On ajoute\n");
+      void *arg1 = &newsockfd;
+      void *arg2 = &clientMsg;
+      void *arg3 = &shid;
+      fork_and_run3(saveFileHandler,arg1,arg2,arg3);
 
-        
+      
 
 
 
-        /*i. Le numéro associé au programme.
-          ii. 0 si le programme compile, un nombre différent de 0 sinon.
-          iii. Une suite de caractères qui correspond aux messages d’erreur du compilateur*/
+      /*i. Le numéro associé au programme.
+        ii. 0 si le programme compile, un nombre différent de 0 sinon.
+        iii. Une suite de caractères qui correspond aux messages d’erreur du compilateur*/
 
-    //Remplacer programme (.)
-    } else if (&clientMsg.num != NULL && clientMsg.filename != NULL){
-        
-    //Executer programme (*,@)
-    } else if (&clientMsg.num != NULL && clientMsg.filename == NULL){
-        void *ptr = &clientMsg.num;
-        fork_and_run1(execProgram,ptr);
-        /*serverMsg.num = clientMsg.num;
-        serverMsg.state;
-        serverMsg.executionTime;
-        serverMsg.returnCode;
-        serverMsg.standardOutput;*/
-        swrite(newsockfd, &serverMsg,sizeof(serverMsg));
+  //Remplacer programme (.)
+  } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
+    printf("On Remplace\n");
+
+  //Executer programme (*,@)
+  } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
+    printf("On execute\n");
+    printf("Num prog %d\n",clientMsg.num);
+    void *ptr = &clientMsg.num;
+    struct timeval t1;
+    struct timeval t2;
+    gettimeofday(&t1, NULL);
+    pid_t child = fork_and_run1(execProgram,ptr);
+
+    int status;
+    /* pid renvoyé par le wait */
+    swaitpid(child, &status, 0);
+
+    gettimeofday(&t2, NULL);
+    int executionTime = (int)(t2.tv_usec - t1.tv_usec);
+    printf("Temps d'execution : %d \n",executionTime);
+    if ( WIFEXITED(status) ){
+      int exit_status = WEXITSTATUS(status);        
+        printf("Exit status of the child was %d\n",exit_status);
+    }
+
+    serverMsg.num = clientMsg.num;
+    //serverMsg.state;
+    serverMsg.executionTime = executionTime;
+    //serverMsg.returnCode;
+    //serverMsg.message;
+    swrite(newsockfd, &serverMsg,sizeof(serverMsg));
     } 
 
 
@@ -154,6 +179,7 @@ void socketHandler(void* arg1) {
 
 int main (int argc, char ** argv){
   //char s[100];
+  //chdir("./CodeDirectory");
   //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
   // printing current working directory
   //printf("%s\n", getcwd(s, 100));

@@ -12,7 +12,8 @@
 #define BUFFERSIZE 300
 
 volatile sig_atomic_t end = 0;
-
+int port;
+char* addr;
 
 // PRE: ServierIP : a valid IP address
 //      ServerPort: a valid port number
@@ -39,14 +40,16 @@ void uploadFile(int sockfd, char* pathFile){
   sclose(fd);
 }
 
-void addFile(int sockfd,char* filePath) {
+void addFile(char* filePath) {
+	int sockfd = initSocketClient(addr, port);
 	char* fileName = strrchr(filePath, '/')+1;
 			
 	CommunicationClientServer msg;
 	msg.nbCharFilename = strlen(fileName);
 	strcpy(msg.filename,fileName);
-
+	msg.num = -1;
 	swrite(sockfd,&msg,sizeof(msg));
+	printf("msg.num client %d\n",msg.num);
 
 	uploadFile(sockfd, filePath);
 
@@ -56,7 +59,8 @@ void addFile(int sockfd,char* filePath) {
 }
 
 
-void replaceFile(int sockfd, int num, char* filePath) {
+void replaceFile(int num, char* filePath) {
+	int sockfd = initSocketClient(addr, port);
 	char* fileName = strrchr(filePath, '/')+1;
 			
 	CommunicationClientServer msg;
@@ -73,14 +77,18 @@ void replaceFile(int sockfd, int num, char* filePath) {
 }
 
 
-void execProg(int sockfd, int num) {
+void execProg(int num) {
+	printf("execProg\n");
+	int sockfd = initSocketClient(addr, port);
 	CommunicationClientServer msg;
 	msg.num = num;
+	msg.nbCharFilename = -1;
 	swrite(sockfd,&msg,sizeof(msg));
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("Réponse du serveur: %s\n", serverMsg.message);
+	printf("Réponse du serveur: (num) %d\n", serverMsg.num);
+	printf("Réponse du serveur: (executionTime) %d\n", serverMsg.executionTime);
 }
 
 
@@ -112,9 +120,8 @@ void timer(void *arg1, void* arg2) {
 // RECUREXEC
 //***************************************************************************
  
-void recurExec(void *arg1, void* arg2) {
+void recurExec(void *arg1) {
 	int *pipefd = arg1;
-	int sockfd = *(int*)arg2;
 
 	int num;
 	int progs[100];
@@ -126,14 +133,16 @@ void recurExec(void *arg1, void* arg2) {
 
 	// read pipe
 	int szIntRd = sread(pipefd[0], &num, sizeof(int));
-
+	printf("recurExec %d\n",szIntRd);
 	while(szIntRd > 0){
 		if (num < 0) {
+			printf("recurExec if\n");
 			for (int i = 0; i < nbProgs; ++i) {
-				execProg(sockfd, progs[i]);
+				execProg(progs[i]);
 			}			
 		}
 		else {
+			printf("recurExec else\n");
 			//command * (add a progNum in RecurExec)
 			progs[nbProgs] = num;
 			nbProgs++;
@@ -143,6 +152,7 @@ void recurExec(void *arg1, void* arg2) {
 	//close read
 	ret = close(pipefd[0]);
 	checkNeg(ret, "close error");
+	printf("Fin recurExec\n");
 }
 
 void sigusr1_handler() {
@@ -155,26 +165,24 @@ void sigusr1_handler() {
 //***************************************************************************
 
 int main(int argc, char **argv){
-	char *adr = argv[0];
-	int port = atoi(argv[1]);
-	int delay = atoi(argv[2]);
+	addr = argv[1];
+	port = atoi(argv[2]);
+	int delay = atoi(argv[3]);
 
-	int sockfd = initSocketClient(adr, port);
+	//int sockfd = initSocketClient(addr, port);
 
 	/* create pipe */
 	int pipefd[2];
-	int ret = pipe(pipefd);
-	checkNeg(ret, "pipe error");
+	spipe(pipefd);
 
 	/* create child 1 */
 	pid_t pidTimer = fork_and_run2(timer, pipefd, &delay);
 
 	/* create child 2 */
-	fork_and_run2(recurExec, pipefd, &sockfd);
+	fork_and_run1(recurExec, pipefd);
 
 	//close read
-	ret = close(pipefd[0]);
-	checkNeg(ret, "close error");
+	sclose(pipefd[0]);
 
 	/* read on stdin */
 	char bufRd[BUFFERSIZE];
@@ -187,7 +195,8 @@ int main(int argc, char **argv){
 	while(command != 'q') {
 		//add a C file to the server
 		if (command == '+') {
-			addFile(sockfd, param);
+			printf("On rentre dans + \n");
+			addFile(param);
 		}
 		//replace a C file to the server
 		else if (command == '.') {
@@ -197,17 +206,18 @@ int main(int argc, char **argv){
 			*spaceAddress = '\0';
 			int num = atoi(param);
 
-			replaceFile(sockfd, num, filePath);
+			replaceFile(num, filePath);
 		}
 		//add a progNum in RecurExec
 		else if (command == '*') {
+			printf("command *\n");
 			int num = atoi(param);
 			swrite(pipefd[1], &num, sizeof(int));
 		}
 		//exec once a progNum
 		else if (command == '@') {
 			int num = atoi(param);
-			execProg(sockfd, num);
+			execProg(num);
 		}
 
 		/* read on stdin */
@@ -223,8 +233,7 @@ int main(int argc, char **argv){
 
 
 	//close write
-	ret = close(pipefd[1]);
-	checkNeg(ret, "close error");
+	sclose(pipefd[1]);
 
 	return 0;
 }

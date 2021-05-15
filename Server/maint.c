@@ -18,7 +18,7 @@ int main (int argc, char *argv[]) {
     // shared memory
     sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), IPC_CREAT | PERM);
     // semaphore
-    sem_create(SEM_KEY, 1, PERM, 1);
+    sem_create(SEM_KEY, 1, PERM, 0);
 
   } else if(atoi(argv[1]) == 2){
     int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), IPC_CREAT | PERM);
