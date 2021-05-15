@@ -33,7 +33,7 @@ void uploadFile(int sockfd, char* pathFile){
   while(sread(fd,&buffer,sizeof(buffer)) != 0){
     swrite(sockfd,buffer,sizeof(buffer));
   }
-  int s = shutdown(sockfd,SHUT_RD); //A VOIR POUR PEUT ETRE DISALLOWED SHUT-RDWR
+  int s = shutdown(sockfd,SHUT_WR); 
   checkNeg(s, "ERROR SHUTDOWN");
 
   sclose(fd);
