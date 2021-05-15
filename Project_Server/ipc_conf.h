@@ -6,9 +6,9 @@
 
 #define PERM 0666
 
-#define SHARED_MEMORY_KEY 1
+#define SHARED_MEMORY_KEY 370
 
-#define SEM_KEY 2
+#define SEM_KEY 369
 
 #define MAX_NAME 20
 

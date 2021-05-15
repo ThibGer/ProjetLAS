@@ -123,13 +123,10 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
 }
 
 void execProgram(void* arg1){
-  int num = *(int *)arg1;
-  char progName[4];
-  sprintf(progName, "%d", num);
+  char *progName = (char *)arg1;
   chdir("./CodeDirectory");
-  int ret = execl(progName,progName, NULL);
-  printf("Retour : %d\n",ret);
-  exit(ret);
+  execl(progName,progName, NULL);
+  exit(EXIT_FAILURE);
 }
 
 
@@ -138,7 +135,6 @@ void socketHandler(void* arg1) {
   int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
 
   int newsockfd = *(int *)arg1;
-  printf("Numéro du socket dans fils : %d\n",newsockfd);
   CommunicationClientServer clientMsg;
   CommunicationServerClient serverMsg;
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
@@ -161,43 +157,56 @@ void socketHandler(void* arg1) {
   //Executer programme (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
     printf("On execute\n");
-    printf("Num prog %d\n",clientMsg.num);
-    void *ptr = &clientMsg.num;
-    struct timeval t1;
-    struct timeval t2;
-    gettimeofday(&t1, NULL);
-    pid_t child = fork_and_run1(execProgram,ptr);
+    int dupFd = -1;
+    chdir("./CodeDirectory");
+    struct stat statStruct;
+    char progName[3];
+    sprintf(progName, "%d", clientMsg.num);
+    int fileExist = stat(progName, &statStruct);
 
-    int status;
-    /* pid renvoyé par le wait */
-    swaitpid(child, &status, 0);
+    //Si le fichier n'existe pas
+    if(fileExist < 0){
+      serverMsg.state = -2;
+      serverMsg.executionTime = -1;
+      serverMsg.returnCode = -1;
+    // TODO VOIR SI FICHIER COMPILE DANS MEMOIRE PARTAGEE
+    } else {
+      void *ptr = &progName;
+      struct timeval t1;
+      struct timeval t2;
+      gettimeofday(&t1, NULL);
+      //Redirige StdOut vers le socket
+      dupFd = dup2(newsockfd,1);
+      pid_t child = fork_and_run1(execProgram,ptr);
 
-    gettimeofday(&t2, NULL);
-    int executionTime = (int)(t2.tv_usec - t1.tv_usec);
-    printf("Temps d'execution : %d \n",executionTime);
-    if ( WIFEXITED(status) ){
-      int exit_status = WEXITSTATUS(status);        
-        printf("Exit status of the child was %d\n",exit_status);
+      int status;
+      /* pid renvoyé par le wait */
+      swaitpid(child, &status, 0);
+
+      gettimeofday(&t2, NULL);
+      int executionTime = (int)(t2.tv_usec - t1.tv_usec);
+      //Si le programme ne s'est pas terminé correctement
+      if(WEXITSTATUS (status) != 0){
+        serverMsg.state = 0;
+      } else {
+        serverMsg.state = 1;
+      }
+      serverMsg.returnCode = WEXITSTATUS (status);
+      serverMsg.executionTime = executionTime;
+      //TODO A REMPLACER PAR STDOUT
+      char* message = "Message Bidon";
+      strcpy(serverMsg.message,message);
+
     }
-
     serverMsg.num = clientMsg.num;
-    //serverMsg.state;
-    serverMsg.executionTime = executionTime;
-    //serverMsg.returnCode;
-    //serverMsg.message;
     swrite(newsockfd, &serverMsg,sizeof(serverMsg));
-    } 
+    if(dupFd != -1)
+      sclose(dupFd);
+    }
 
 
 }
 
-/*void testExecHandler () {
-  printf("testExecHandler\n");
-  chdir("./CodeDirectory");
-  int ret = execl("helloWorld", "helloWord", NULL);
-  printf("Retour : %d\n",ret);
-  exit(ret);
-}*/
 
 int main (int argc, char ** argv){
   //char s[100];
@@ -205,22 +214,6 @@ int main (int argc, char ** argv){
   //sexecl("/usr/bin/gcc","gcc", "-o", "helloWorld", "helloWorld.c", NULL);
   // printing current working directory
   //printf("%s\n", getcwd(s, 100));
-  /*struct timeval t1;
-  struct timeval t2;
-  gettimeofday(&t1, NULL);
-  pid_t child = fork_and_run0(testExecHandler);
-
-  int status;*/
-  /* pid renvoyé par le wait */
-  /*swaitpid(child, &status, 0);
-
-  gettimeofday(&t2, NULL);
-  int executionTime = (int)(t2.tv_usec - t1.tv_usec);
-  printf("Temps d'execution : %d \n",executionTime);
-  if ( WIFEXITED(status) ){
-    int exit_status = WEXITSTATUS(status);        
-      printf("Exit status of the child was %d\n",exit_status);
-  }*/
 
   int sockfd, newsockfd;
 
@@ -234,10 +227,8 @@ int main (int argc, char ** argv){
       newsockfd = saccept(sockfd);
       //Si le socket a bien été accepté
       if (newsockfd > 0 ){
-          printf("Numéro du socket dans parent : %d\n",newsockfd);
           void *ptr = &newsockfd;
-          pid_t childID = fork_and_run1(socketHandler,ptr);
-          printf("Id du child : %d\n",childID);
+          fork_and_run1(socketHandler,ptr);
       }
   }
 }

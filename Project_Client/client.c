@@ -15,8 +15,10 @@ volatile sig_atomic_t end = 0;
 int port;
 char* addr;
 
+
+
 // PRE: ServierIP : a valid IP address
-//      ServerPort: a valid port number
+//      ServerPort : a valid port number
 // POST: on success connects a client socket to ServerIP:port
 //       return socket file descriptor
 //       on failure, displays error cause and quits the program
@@ -26,8 +28,13 @@ int initSocketClient(char ServerIP[16], int Serverport) {
   return sockfd;
 }
 
-void uploadFile(int sockfd, char* pathFile){
-  int fd = sopen(pathFile,O_RDONLY,0100);
+
+
+// PRE: sockfd : a socket file descriptor
+//      filePath : the path of the file to upload
+// POST: send the file's text through the socket
+void uploadFile(int sockfd, char* filePath){
+  int fd = sopen(filePath,O_RDONLY,0100);
 
   char buffer[1000];
   while(sread(fd,&buffer,sizeof(buffer)) != 0){
@@ -39,27 +46,43 @@ void uploadFile(int sockfd, char* pathFile){
   sclose(fd);
 }
 
+
+
+// PRE: filePath : a valid IP address
+// POST: add a C file on the server
 void addFile(char* filePath) {
 	int sockfd = initSocketClient(addr, port);
+
+	//find the last occur of '/' in the filePath to get the fileName
 	char* fileName = strrchr(filePath, '/')+1;
-			
+	
+
 	CommunicationClientServer msg;
 	msg.nbCharFilename = strlen(fileName);
 	strcpy(msg.filename,fileName);
-	msg.num = -1;
+	msg.num = -1; 			//to distinct with the replace command
 	swrite(sockfd,&msg,sizeof(msg));
-	printf("msg.num client %d\n",msg.num);
 
+	//upload and send the file
 	uploadFile(sockfd, filePath);
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("Réponse du serveur: %s\n", serverMsg.message);
+	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
+	printf("   Numéro du programme: %d\n", serverMsg.num);
+	printf("   Compilation programme: %d\n", serverMsg.state);
+	printf("   message d'erreur: \n\n %s\n", serverMsg.message);
+	printf("\n   ----------------------------------------------- \n\n");
 }
 
 
+// PRE: num: the num of the programm to replace
+//      pathFile : the path of the file to upload
+// POST: replace the programm num by a C file on the server
 void replaceFile(int num, char* filePath) {
 	int sockfd = initSocketClient(addr, port);
+
+	//find the last occur of '/' in the filePath to get the fileName
 	char* fileName = strrchr(filePath, '/')+1;
 			
 	CommunicationClientServer msg;
@@ -68,25 +91,42 @@ void replaceFile(int num, char* filePath) {
 	strcpy(msg.filename,fileName);
 	swrite(sockfd,&msg,sizeof(msg));
 
+	//upload and send the file
 	uploadFile(sockfd, filePath);
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("Réponse du serveur: %s\n", serverMsg.message);
+	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
+	printf("   Numéro du programme: %d\n", serverMsg.num);
+	printf("   Compilation programme: %d\n", serverMsg.state);
+	printf("   message d'erreur: \n\n %s\n", serverMsg.message);
+	printf("\n   ----------------------------------------------- \n\n");
 }
 
 
+// PRE: num: the num of the programm to execute
+// POST: execute the num programm on the server
 void execProg(int num) {
 	int sockfd = initSocketClient(addr, port);
+
 	CommunicationClientServer msg;
 	msg.num = num;
-	msg.nbCharFilename = -1;
+	msg.nbCharFilename = -1;		//to distinct with the add and replace commands
 	swrite(sockfd,&msg,sizeof(msg));
-
+	
 	CommunicationServerClient serverMsg;
+	char stdoutMsg[255];
+	sread(sockfd,&stdoutMsg,sizeof(stdoutMsg));
+	
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	printf("Réponse du serveur: (num) %d\n", serverMsg.num);
-	printf("Réponse du serveur: (executionTime) %d\n", serverMsg.executionTime);
+	printf("\n   ----------------------------------------------- \n   Réponse du serveur: \n");
+	printf("   Numéro du programme: %d\n", serverMsg.num);
+	printf("   État du programme: %d\n", serverMsg.state);
+	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
+	printf("   Code de retour: %d\n", serverMsg.returnCode);
+	printf("   Sortie standard: \n " );
+	printf("   %s\n",stdoutMsg);
+	printf("\n   ----------------------------------------------- \n\n");
 }
 
 
@@ -97,11 +137,13 @@ void execProg(int num) {
 void timer(void *arg1, void* arg2) {
 	int *pipefd = arg1;
 	int delay = *(int*)arg2;
+
 	int heartBit = -1;
 
-	//close read
+	// close read
 	sclose(pipefd[0]);
 
+	// while no signal
 	while (end == 0) {
 		sleep(delay);
 		swrite(pipefd[1], &heartBit, sizeof(int));
@@ -130,11 +172,12 @@ void recurExec(void *arg1) {
 	// read pipe
 	while(sread(pipefd[0], &num, sizeof(int)) > 0){
 		if (num < 0) {
+			// execute all progs (every heartBit from timer)
 			for (int i = 0; i < nbProgs; ++i) {
 				execProg(progs[i]);
 			}			
 		} else {
-			//command * (add a progNum in RecurExec)
+			// command * (add a progNum in RecurExec)
 			progs[nbProgs] = num;
 			nbProgs++;
 		}
@@ -144,6 +187,9 @@ void recurExec(void *arg1) {
 	sclose(pipefd[0]);
 }
 
+
+
+// signal to close timer's pipe
 void sigusr1_handler() {
   end = 1;
 }
@@ -158,7 +204,6 @@ int main(int argc, char **argv){
 	port = atoi(argv[2]);
 	int delay = atoi(argv[3]);
 	ssigaction(SIGUSR1, sigusr1_handler);
-	//int sockfd = initSocketClient(addr, port);
 
 	/* create pipe */
 	int pipefd[2];
@@ -182,14 +227,13 @@ int main(int argc, char **argv){
 
 	/* prompt */
 	while(command != 'q') {
-		//add a C file to the server
+		/* add a C file to the server */
 		if (command == '+') {
-			printf("On rentre dans + \n");
 			addFile(param);
 		}
-		//replace a C file to the server
+		/* replace a C file to the server */
 		else if (command == '.') {
-			//split 2 param
+			//split 2 parameters
 			char* spaceAddress = strtok(param, " ");
 			char* filePath = spaceAddress+1;
 			*spaceAddress = '\0';
@@ -197,13 +241,13 @@ int main(int argc, char **argv){
 
 			replaceFile(num, filePath);
 		}
-		//add a progNum in RecurExec
+		/* add a progNum in RecurExec */
 		else if (command == '*') {
-			printf("command *\n");
 			int num = atoi(param);
+			//send the progNum to the RecurExec through the pipe
 			swrite(pipefd[1], &num, sizeof(int));
 		}
-		//exec once a progNum
+		/* exec once a progNum */
 		else if (command == '@') {
 			int num = atoi(param);
 			execProg(num);
@@ -216,10 +260,10 @@ int main(int argc, char **argv){
 		param = bufRd+2;
 	}
 
-	
+	// send signal to close timer's pipe
 	skill(pidTimer, SIGUSR1);
 
-	//close write
+	// close write
 	sclose(pipefd[1]);
 
 	return 0;
