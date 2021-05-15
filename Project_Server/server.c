@@ -12,6 +12,7 @@
 
 #define BACKLOG 5
 #define SERVER_PORT 9502
+#define PATH_SIZE 30
 
 // PRE:  ServerPort: a valid port number
 // POST: on success bind a socket to 0.0.0.0:port and listen to it
@@ -35,16 +36,29 @@ int initSocketServer(int port) {
   return sockfd;
 }
 
+void compilHandler(void* arg2){
+  //CommunicationServerClient serverMsg = *(CommunicationServerClient*)arg1;
+  char *numProg = (char*)arg2;
+
+  //Compilation
+  chdir("./CodeDirectory");
+  
+  char path[PATH_SIZE];
+  strcpy(path,numProg);
+  strcat(path,".c");
+
+  execl("/usr/bin/gcc","gcc", "-o", numProg, path, NULL);
+}
+
 
 void saveFileHandler(void* arg1, void* arg2, void* arg3){
   int sockfd = *(int*)arg1;
   CommunicationClientServer clientMsg = *(CommunicationClientServer*)arg2;
   int shid = *(int*)arg3;
   char buffer[1000];
-  int sid = sem_get(SEM_KEY, 1);
-  printf("Sid : %d",sid);
-  sem_down0(sid);
 
+  int sid = sem_get(SEM_KEY, 1);
+  sem_down0(sid);
 
   //Stock dans la mémoire partagée
   MainStruct *s = sshmat(shid);
@@ -52,49 +66,60 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   StructProgram prog = s->structProgram[numberOfPrograms];
   prog.num = numberOfPrograms;
   strcpy(prog.name,clientMsg.filename);
+  
   prog.errorCompil = false;
   prog.numberOfExecutions = 0;
   prog.time = 0;
-  char *path = "./CodeDirectory";
-  char number[10];
+  char path[PATH_SIZE] = "./CodeDirectory/";
+  char number[6];
+
   sprintf(number,"%d",numberOfPrograms);
+
   strcat(path,number);
   strcat(path,".c");
-  printf("Path : %s\n",path);
-  int fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0200);
-  printf("APres sOPen\n");
+  int fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0666);
+  
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
+    // TODO A voir si c'est toujours fonctionnel pour de grands progs. peut etre != 999
+    if(strlen(buffer) != 1000){
+      int i = strlen(buffer);
+      while(buffer[i] != '}'){
+        printf("le char%c\n",buffer[i]);
+        buffer[i] = '\0';
+        i --;
+      }
+      
+    }
     nwrite(fd,buffer,strlen(buffer));
+
   }
-  printf("Apres nwrite");
   s->numberOfPrograms ++;
   CommunicationServerClient serverMsg;
   //serverMsg.isCompiled = 0;
-
-  //Compilation
-  /*chdir("./CodeDirectory");
-  path = number;
-  strcat(path,".c");
-
-  int compil = execl("/usr/bin/gcc","gcc", "-o", number, path, NULL);
-  if(compil < 0){
-  	  prog.errorCompil = true;
-  	  serverMsg.isCompiled = -1;
-  }*/
-  //Reponse du serveur
+  
   serverMsg.num = numberOfPrograms;
-  //serverMsg.message = récupérer la suite de caractères.
+  
+
+
+  //COMPILATION
+  void *numProg = &number;
+  fork_and_run1(compilHandler,numProg);
+
+  //TODO dans serverMsg
+  //0 si le programme compile, un nombre différent de 0 sinon. => a faire prendre le status code de compilHandler
+  //Une suite de caractères qui correspond aux messages d’erreur du compilateur.
+
+
+  //TODO dans prog (memoire partagee)
+  //prog.errorCompil => prendre status code de compil Handler
 
 
 
   swrite(sockfd, &serverMsg,sizeof(serverMsg));
 
-  //TODO VOIR AVEC LE EXEC QUI QUITE LE PROG......
-  sem_up0(sid);
   sshmdt(s);
+  sem_up0(sid);
   sclose(fd);
-
-
 }
 
 void execProgram(void* arg1){
@@ -120,10 +145,6 @@ void socketHandler(void* arg1) {
       void *arg2 = &clientMsg;
       void *arg3 = &shid;
       fork_and_run3(saveFileHandler,arg1,arg2,arg3);
-
-      
-
-
 
       /*i. Le numéro associé au programme.
         ii. 0 si le programme compile, un nombre différent de 0 sinon.
