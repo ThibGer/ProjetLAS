@@ -20,8 +20,7 @@ char* addr;
 // POST: on success connects a client socket to ServerIP:port
 //       return socket file descriptor
 //       on failure, displays error cause and quits the program
-int initSocketClient(char ServerIP[16], int Serverport) 
-{
+int initSocketClient(char ServerIP[16], int Serverport) {
   int sockfd = ssocket();
   sconnect(ServerIP, Serverport, sockfd);
   return sockfd;
@@ -78,7 +77,6 @@ void replaceFile(int num, char* filePath) {
 
 
 void execProg(int num) {
-	printf("execProg\n");
 	int sockfd = initSocketClient(addr, port);
 	CommunicationClientServer msg;
 	msg.num = num;
@@ -102,8 +100,7 @@ void timer(void *arg1, void* arg2) {
 	int heartBit = -1;
 
 	//close read
-	int ret = close(pipefd[0]);
-	checkNeg(ret, "close error");
+	sclose(pipefd[0]);
 
 	while (end == 0) {
 		sleep(delay);
@@ -111,8 +108,7 @@ void timer(void *arg1, void* arg2) {
 	}
 	
 	// close write
-	ret = close(pipefd[1]);
-	checkNeg(ret, "close error");
+	sclose(pipefd[1]);
 }
 
 
@@ -132,17 +128,12 @@ void recurExec(void *arg1) {
 	checkNeg(ret, "close error");
 
 	// read pipe
-	int szIntRd = sread(pipefd[0], &num, sizeof(int));
-	printf("recurExec %d\n",szIntRd);
-	while(szIntRd > 0){
+	while(sread(pipefd[0], &num, sizeof(int)) > 0){
 		if (num < 0) {
-			printf("recurExec if\n");
 			for (int i = 0; i < nbProgs; ++i) {
 				execProg(progs[i]);
 			}			
-		}
-		else {
-			printf("recurExec else\n");
+		} else {
 			//command * (add a progNum in RecurExec)
 			progs[nbProgs] = num;
 			nbProgs++;
@@ -150,9 +141,7 @@ void recurExec(void *arg1) {
 	}
 
 	//close read
-	ret = close(pipefd[0]);
-	checkNeg(ret, "close error");
-	printf("Fin recurExec\n");
+	sclose(pipefd[0]);
 }
 
 void sigusr1_handler() {
@@ -168,7 +157,7 @@ int main(int argc, char **argv){
 	addr = argv[1];
 	port = atoi(argv[2]);
 	int delay = atoi(argv[3]);
-
+	ssigaction(SIGUSR1, sigusr1_handler);
 	//int sockfd = initSocketClient(addr, port);
 
 	/* create pipe */
@@ -227,10 +216,8 @@ int main(int argc, char **argv){
 		param = bufRd+2;
 	}
 
-	ssigaction(SIGUSR1, sigusr1_handler);
 	
 	skill(pidTimer, SIGUSR1);
-
 
 	//close write
 	sclose(pipefd[1]);
