@@ -9,7 +9,6 @@ typedef struct {
 
 typedef struct {
     int num;
-    int isCompiled;
     int state;
     int executionTime;
     int returnCode;
