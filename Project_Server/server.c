@@ -169,6 +169,8 @@ void socketHandler(void* arg1) {
       serverMsg.state = -2;
       serverMsg.executionTime = -1;
       serverMsg.returnCode = -1;
+      char fileDoesntExist[1] = "";
+      nwrite(newsockfd,fileDoesntExist,sizeof(fileDoesntExist));
     // TODO VOIR SI FICHIER COMPILE DANS MEMOIRE PARTAGEE
     } else {
       void *ptr = &progName;
@@ -193,15 +195,12 @@ void socketHandler(void* arg1) {
       }
       serverMsg.returnCode = WEXITSTATUS (status);
       serverMsg.executionTime = executionTime;
-      //TODO A REMPLACER PAR STDOUT
-      char* message = "Message Bidon";
-      strcpy(serverMsg.message,message);
 
     }
-    serverMsg.num = clientMsg.num;
-    swrite(newsockfd, &serverMsg,sizeof(serverMsg));
-    if(dupFd != -1)
-      sclose(dupFd);
+      serverMsg.num = clientMsg.num;
+      nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
+      if(dupFd != -1)
+        sclose(dupFd);
     }
 
 
