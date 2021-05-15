@@ -37,10 +37,7 @@ int initSocketServer(int port) {
 }
 
 void compilHandler(void* arg2){
-  //CommunicationServerClient serverMsg = *(CommunicationServerClient*)arg1;
   char *numProg = (char*)arg2;
-
-  //Compilation
   chdir("./CodeDirectory");
   
   char path[PATH_SIZE];
@@ -48,6 +45,7 @@ void compilHandler(void* arg2){
   strcat(path,".c");
 
   execl("/usr/bin/gcc","gcc", "-o", numProg, path, NULL);
+  exit(EXIT_FAILURE);
 }
 
 
@@ -84,7 +82,6 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
     if(strlen(buffer) != 1000){
       int i = strlen(buffer);
       while(buffer[i] != '}'){
-        printf("le char%c\n",buffer[i]);
         buffer[i] = '\0';
         i --;
       }
@@ -94,24 +91,31 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
 
   }
   s->numberOfPrograms ++;
+
+
+
   CommunicationServerClient serverMsg;
-  //serverMsg.isCompiled = 0;
-  
   serverMsg.num = numberOfPrograms;
   
-
-
   //COMPILATION
   void *numProg = &number;
-  fork_and_run1(compilHandler,numProg);
+  int dupFd = dup2(sockfd,1);
+  pid_t pidCompil = fork_and_run1(compilHandler,numProg);
+  int status;
+  swaitpid(pidCompil,&status,0);
+  sclose(dupFd);
+  if(WEXITSTATUS (status) != 0){
+    //Error 
+    serverMsg.state = -1;
+    prog.errorCompil = true;
+  }else{
+    //Good
+    serverMsg.state = 0;
+    prog.errorCompil = false;
+  }
 
-  //TODO dans serverMsg
-  //0 si le programme compile, un nombre différent de 0 sinon. => a faire prendre le status code de compilHandler
-  //Une suite de caractères qui correspond aux messages d’erreur du compilateur.
 
 
-  //TODO dans prog (memoire partagee)
-  //prog.errorCompil => prendre status code de compil Handler
 
 
 
@@ -140,16 +144,11 @@ void socketHandler(void* arg1) {
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
   //Ajout fichier (+)
   if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
-    printf("On ajoute\n");
+    printf("ADD FILE\n");
       void *arg1 = &newsockfd;
       void *arg2 = &clientMsg;
       void *arg3 = &shid;
       fork_and_run3(saveFileHandler,arg1,arg2,arg3);
-
-      /*i. Le numéro associé au programme.
-        ii. 0 si le programme compile, un nombre différent de 0 sinon.
-        iii. Une suite de caractères qui correspond aux messages d’erreur du compilateur*/
-
   //Remplacer programme (.)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
     printf("On Remplace\n");
@@ -189,6 +188,14 @@ void socketHandler(void* arg1) {
       if(WEXITSTATUS (status) != 0){
         serverMsg.state = 0;
       } else {
+        int sid = sem_get(SEM_KEY, 1);
+        sem_down0(sid);
+        //++ nombre exécutions & time
+        MainStruct *s = sshmat(shid);
+        StructProgram prog = s->structProgram[clientMsg.num];
+        prog.numberOfExecutions ++;
+        prog.time += executionTime;
+        sem_up0(sid);
         serverMsg.state = 1;
       }
       serverMsg.returnCode = WEXITSTATUS (status);
