@@ -66,12 +66,15 @@ void addFile(char* filePath) {
 	//upload and send the file
 	uploadFile(sockfd, filePath);
 
+	char stdoutMsg[800];
+	sread(sockfd,&stdoutMsg,sizeof(stdoutMsg));
+	
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
-	printf("   message d'erreur: \n\n %s\n", serverMsg.message);
+	printf("   message d'erreur: \n\n %s\n", stdoutMsg);
 	printf("\n-----------------------------------------------\n\n");
 }
 
@@ -118,7 +121,10 @@ void execProg(int num) {
 	char buffer[BUFFERSIZE];
 	while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
 		int size = strlen(stdoutMsg) + strlen(buffer);
-		realloc(stdoutMsg, size);
+		char *rea= realloc(stdoutMsg, size);
+		if(!rea){
+			exit(1);
+		}
 		strcat(stdoutMsg, buffer);
 	}*/
 	char stdoutMsg[BUFFERSIZE];
@@ -240,12 +246,13 @@ int main(int argc, char **argv){
 		}
 		/* replace a C file to the server */
 		else if (command == '.') {
+			printf("param AVANT |%s|\n",param);
+
 			//split 2 parameters
-			char* spaceAddress = strtok(param, " ");
+			char* spaceAddress = strchr(param, ' ');
 			char* filePath = spaceAddress+1;
 			*spaceAddress = '\0';
 			int num = atoi(param);
-
 			replaceFile(num, filePath);
 		}
 		/* add a progNum in RecurExec */
