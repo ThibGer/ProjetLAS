@@ -174,13 +174,12 @@ void createFile(int sockfd, CommunicationClientServer clientMsg, int shid){
   prog.errorCompil = false;
   prog.numberOfExecutions = 0;
   prog.time = 0;
-
+  s->structProgram[numberOfPrograms] = prog;
   readDataAndSave(numberOfPrograms,true,sockfd);
 
-  compilation(numberOfPrograms,sockfd,&prog);
-
-  s->structProgram[numberOfPrograms] = prog;
   s->numberOfPrograms ++;
+
+  compilation(numberOfPrograms,sockfd,&prog);
 
   sshmdt(s);
   sem_up0(sid);
