@@ -12,7 +12,6 @@ typedef struct {
     int state;
     int executionTime;
     int returnCode;
-    char message[255];
 } CommunicationServerClient;
 
 #endif
