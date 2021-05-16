@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "ipc_conf.h"
 #include "../utils_v10.h"
@@ -42,18 +43,76 @@ void compilHandler(void* arg2){
   char path[PATH_SIZE];
   strcpy(path,numProg);
   strcat(path,".c");
-
   execl("/usr/bin/gcc","gcc", "-o", numProg, path, NULL);
   exit(EXIT_FAILURE);
 }
 
-
-void saveFileHandler(void* arg1, void* arg2, void* arg3){
-  int sockfd = *(int*)arg1;
-  CommunicationClientServer clientMsg = *(CommunicationClientServer*)arg2;
-  int shid = *(int*)arg3;
+void readDataAndSave(int num, bool create,int sockfd){
+  printf("ReadDataAndSave\n");
   char buffer[1000];
 
+  char path[PATH_SIZE] = "./CodeDirectory/";
+  char number[6];
+
+  sprintf(number,"%d",num);
+
+  strcat(path,number);
+  strcat(path,".c");
+  int fd;
+  if(create){
+    fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0666);
+  }else{
+    //Replace
+    fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, 0666);
+  }
+  
+  //Retirer mauvais caractères à la fin du fichier.
+  while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
+    if(strlen(buffer) != 1000){  // ou 999 à tester (TODO)
+      int i = strlen(buffer);
+      while(buffer[i] != '}'){
+        buffer[i] = '\0';
+        i --;
+        
+      }
+    }
+    nwrite(fd,buffer,strlen(buffer));
+  }
+
+  sclose(fd);
+
+}
+
+void compilation(int num,int sockfd,StructProgram *prog){
+  printf("Compilation\n");
+
+  CommunicationServerClient serverMsg;
+  serverMsg.num = num;
+  char numChar[5];
+  sprintf(numChar, "%d", num);
+  void *numProg = &numChar;
+  int dupFd = dup2(sockfd,STDERR_FILENO);
+  pid_t pidCompil = fork_and_run1(compilHandler,numProg);
+  sclose(dupFd);
+  int status;
+  swaitpid(pidCompil,&status,0);
+
+  if(WEXITSTATUS (status) != 0){
+    //Error 
+    serverMsg.state = -1;
+    prog->errorCompil = true;
+  }else{
+    //Good
+    serverMsg.state = 0;
+    prog->errorCompil = false;
+    char error[1] = "";
+    nwrite(sockfd,error,sizeof(error));
+  }
+  
+  swrite(sockfd, &serverMsg,sizeof(serverMsg));
+}
+
+void createFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   int sid = sem_get(SEM_KEY, 1);
   sem_down0(sid);
 
@@ -67,62 +126,34 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   prog.errorCompil = false;
   prog.numberOfExecutions = 0;
   prog.time = 0;
-  char path[PATH_SIZE] = "./CodeDirectory/";
-  char number[6];
+  s->structProgram[numberOfPrograms] = prog;
+  printf("j'ai passse le prog\n");
 
-  sprintf(number,"%d",numberOfPrograms);
+  readDataAndSave(numberOfPrograms,true,sockfd);
 
-  strcat(path,number);
-  strcat(path,".c");
-  int fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0666);
-  
-  while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
-    // TODO A voir si c'est toujours fonctionnel pour de grands progs. peut etre != 999
-    if(strlen(buffer) != 1000){
-      int i = strlen(buffer);
-      while(buffer[i] != '}'){
-        buffer[i] = '\0';
-        i --;
-      }
-      
-    }
-    nwrite(fd,buffer,strlen(buffer));
-
-  }
   s->numberOfPrograms ++;
 
-
-
-  CommunicationServerClient serverMsg;
-  serverMsg.num = numberOfPrograms;
-  
-  //COMPILATION
-  void *numProg = &number;
-  int dupFd = dup2(sockfd,1);
-  pid_t pidCompil = fork_and_run1(compilHandler,numProg);
-  int status;
-  swaitpid(pidCompil,&status,0);
-  sclose(dupFd);
-  if(WEXITSTATUS (status) != 0){
-    //Error 
-    serverMsg.state = -1;
-    prog.errorCompil = true;
-  }else{
-    //Good
-    serverMsg.state = 0;
-    prog.errorCompil = false;
-  }
-
-  s->structProgram[numberOfPrograms] = prog;
-
-
-
-
-  swrite(sockfd, &serverMsg,sizeof(serverMsg));
+  compilation(numberOfPrograms,sockfd,&prog);
 
   sshmdt(s);
   sem_up0(sid);
-  sclose(fd);
+}
+
+
+void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
+  int sid = sem_get(SEM_KEY, 1);
+  sem_down0(sid);
+  MainStruct *s = sshmat(shid);
+  StructProgram prog = s->structProgram[clientMsg.num];
+  strcpy(prog.name,clientMsg.filename);
+
+  readDataAndSave(clientMsg.num,false,sockfd);
+  
+  compilation(clientMsg.num,sockfd,&prog);
+
+
+  sshmdt(s);
+  sem_up0(sid);
 }
 
 void execHandler(void* arg1){
@@ -149,14 +180,20 @@ void socketHandler(void* arg1) {
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
   //Ajout fichier (+)
   if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
-    printf("ADD FILE\n");
-      void *arg1 = &newsockfd;
+      printf("ADD FILE\n");
+      /*void *arg1 = &newsockfd;
       void *arg2 = &clientMsg;
       void *arg3 = &shid;
-      fork_and_run3(saveFileHandler,arg1,arg2,arg3);
+      fork_and_run3(saveFileHandler,arg1,arg2,arg3);*/
+      createFile(newsockfd,clientMsg,shid);
   //Remplacer programme (.)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
     printf("On Remplace\n");
+    /*void *arg1 = &newsockfd;
+    void *arg2 = &clientMsg;
+    void *arg3 = &shid;
+    fork_and_run3(replaceFileHandler,arg1,arg2,arg3);*/ 
+    replaceFile(newsockfd,clientMsg,shid);
 
   //Executer programme (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){

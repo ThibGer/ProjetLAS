@@ -257,12 +257,13 @@ int main(int argc, char **argv){
 		}
 		/* replace a C file to the server */
 		else if (command == '.') {
+			printf("param AVANT |%s|\n",param);
+
 			//split 2 parameters
-			char* spaceAddress = strtok(param, " ");
+			char* spaceAddress = strchr(param, ' ');
 			char* filePath = spaceAddress+1;
 			*spaceAddress = '\0';
 			int num = atoi(param);
-
 			replaceFile(num, filePath);
 		}
 		/* add a progNum in RecurExec */
