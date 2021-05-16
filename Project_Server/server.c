@@ -157,8 +157,7 @@ void compilation(int num, int sockfd, StructProgram *prog){
 
   sendMessage(pipefd,sockfd);
 
-  int s = shutdown(sockfd,SHUT_WR); 
-  checkNeg(s, "ERROR SHUTDOWN");
+
 
   sclose(pipefd[0]);
 }
@@ -222,8 +221,6 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
 void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockfd){
     serverMsg->executionTime = -1;
     serverMsg->returnCode = -1;
-    char blank[1] = "";
-    nwrite(newsockfd,blank,sizeof(blank));
 }
 
 // PRE:  newsockfd: a socket file descriptor
@@ -290,10 +287,7 @@ void execFile(int newsockfd, CommunicationClientServer clientMsg, int shid){
     sem_up0(sid);
     serverMsg.num = clientMsg.num;
     nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
-    //TODO
-    char line[BUFFER_SIZE];
-    sread(pipefd[0],line,BUFFER_SIZE);
-    swrite(newsockfd, line,sizeof(line));
+    sendMessage(pipefd,newsockfd);
 
     sclose(pipefd[0]);
 }
@@ -320,6 +314,9 @@ void socketHandler(void* arg1) {
     printf("On execute\n");
     execFile(newsockfd,clientMsg,shid);
   }
+  int s = shutdown(newsockfd,SHUT_WR); 
+  checkNeg(s, "ERROR SHUTDOWN");
+  sclose(newsockfd);
 }
 
 

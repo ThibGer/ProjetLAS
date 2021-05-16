@@ -141,8 +141,11 @@ void execProg(int num) {
 	printf("   État du programme: %d\n", serverMsg.state);
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
-	printf("   Sortie standard: \n\n");		
-	readServerMessage(sockfd);	
+	if(serverMsg.state >= 0){
+		printf("   Sortie standard: \n\n");		
+		readServerMessage(sockfd);	
+	}
+
 	
 	printf("\n-----------------------------------------------\n");
 }
