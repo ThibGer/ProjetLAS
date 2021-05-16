@@ -34,7 +34,7 @@ int initSocketClient(char ServerIP[16], int Serverport) {
 // POST: read and print the text
 void readServerMessage(int sockfd) {
 	char buffer[BUFFERSIZE];
-	while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
+	while(sread(sockfd,buffer,BUFFERSIZE * sizeof(char)) != 0){
 		printf("%s\n",buffer);
 	}
 }
@@ -47,9 +47,11 @@ void readServerMessage(int sockfd) {
 void uploadFile(int sockfd, char* filePath){
   int fd = sopen(filePath,O_RDONLY,0100);
 
-  char buffer[BUFFERSIZE];
-  while(sread(fd,&buffer,sizeof(buffer)) != 0){
-    swrite(sockfd,buffer,sizeof(buffer));
+  char buffer[10];
+  int n = sread(fd,buffer,10 * sizeof(char));
+  while(n > 0){
+    swrite(sockfd,buffer,n * sizeof(char));
+    n = sread(fd,buffer,10 * sizeof(char));
   }
   int s = shutdown(sockfd,SHUT_WR); 
   checkNeg(s, "ERROR SHUTDOWN");
