@@ -12,13 +12,12 @@
 #include "../communications.h"
 
 #define BACKLOG 5
-#define SERVER_PORT 9502
-#define PATH_SIZE 25
+#define PATHSIZE 25
 #define PROG_NAME_SIZE 5 
 #define BUFFERSIZE 300
 
-
-// PRE:  arg2: the number of prog to be compiled
+// PRE:  arg1: the number of prog to be compiled
+//       arg2: pipe
 // POST: on success, generate the executable in ./CodeDirectory 
 //       with the prog number
 //       on failure, EXIT_FAILURE
@@ -30,7 +29,7 @@ void compilHandler(void* arg1,void* arg2){
   sclose(pipefd[0]);
 
   chdir("./CodeDirectory");
-  char path[PATH_SIZE];
+  char path[PATHSIZE];
   strcpy(path,numProg);
   strcat(path,".c");
 
@@ -41,6 +40,7 @@ void compilHandler(void* arg1,void* arg2){
 }
 
 // PRE: arg1 : a void pointer of a name of an executable
+//      arg2 : pipe
 // POST: execute the program
 // RES:  return exit code of program in case of success
 //       or EXIT_FAILURE code in case of failure
@@ -76,34 +76,29 @@ void sendMessage(int *pipefd,int sockfd) {
 //       create: true to create a new program, false to replace the program
 //       sockfd: a socket file descriptor
 // POST: on success and create at true, generate the file in ./CodeDirectory with the prog number
-//       on success and create at false, replace the file in ./CodeDirectory with the prog number
 //       on failure, print Error OPEN.
-void readDataAndSave(int num, bool create,int sockfd){
-  printf("ReadDataAndSave\n");
-  char buffer[1000];
+void readDataAndSave(int num, int sockfd){
+  char buffer[BUFFERSIZE];
 
-  char path[PATH_SIZE] = "./CodeDirectory/";
+  char path[PATHSIZE] = "./CodeDirectory/";
   char number[PROG_NAME_SIZE];
   sprintf(number,"%d",num);
 
   strcat(path,number);
   strcat(path,".c");
-  int fd;
-  if(create){
-    fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, PERM);
-  }else{
-    //Replace
-    fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, PERM);
-  }
+  int fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, PERM);
+ 
   
   //Remove bad characters at the end of the file.
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
-    if(strlen(buffer) != 1000){  // ou 999 à tester (TODO)
+    printf("je passe dans la boucle \n");
+    if(strlen(buffer) != BUFFERSIZE){  // ou 299 à tester (TODO)
+      printf("je suis dans la fin\n");
+      printf("strlen %d\n",strlen(buffer));
       int i = strlen(buffer);
       while(buffer[i] != '}'){
         buffer[i] = '\0';
         i --;
-        
       }
     }
     nwrite(fd,buffer,strlen(buffer));
@@ -119,8 +114,6 @@ void readDataAndSave(int num, bool create,int sockfd){
 // POST: on success, sends the client a success message.
 //       on failure, sends the client an error message.
 void compilation(int num, int sockfd, StructProgram *prog){
-  printf("Compilation\n");
-
   CommunicationServerClient serverMsg;
   serverMsg.num = num;
   char numChar[PROG_NAME_SIZE];
@@ -182,7 +175,7 @@ void createFile(int sockfd, CommunicationClientServer clientMsg, int shid){
   prog.numberOfExecutions = 0;
   prog.time = 0;
 
-  readDataAndSave(numberOfPrograms,true,sockfd);
+  readDataAndSave(numberOfPrograms,sockfd);
 
   compilation(numberOfPrograms,sockfd,&prog);
 
@@ -204,7 +197,7 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   StructProgram prog = s->structProgram[clientMsg.num];
   strcpy(prog.name,clientMsg.filename);
 
-  readDataAndSave(clientMsg.num,false,sockfd);
+  readDataAndSave(clientMsg.num,sockfd);
   
   compilation(clientMsg.num,sockfd,&prog);
 
@@ -330,7 +323,7 @@ int initSocketServer(int port) {
   int sockfd  = ssocket();
 
   /* no socket error */
-  
+
   sbind(port, sockfd);
   
   /* no bind error */
@@ -354,7 +347,6 @@ int main (int argc, char ** argv){
   int port = atoi(argv[1]);
   int sockfd, newsockfd;
 
-  //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
   sockfd = initSocketServer(port);
   printf("Le serveur tourne sur le port : %i \n",port);
 
@@ -363,7 +355,7 @@ int main (int argc, char ** argv){
 
       newsockfd = saccept(sockfd);
       //Si le socket a bien été accepté
-      if (newsockfd > 0 ){
+      if (newsockfd > 0){
           void *ptr = &newsockfd;
           fork_and_run1(socketHandler,ptr);
       }
