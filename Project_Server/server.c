@@ -217,38 +217,34 @@ void execFile(int newsockfd, CommunicationClientServer clientMsg, int shid){
     CommunicationServerClient serverMsg;
     int sid = sem_get(SEM_KEY, 1);
     sem_down0(sid);
-    //Si le fichier n'existe pas
+    //If file doesn't exist
     if(fileExist < 0) {
-      printf("Fichier existe pas\n");
       serverMsg.state = -2;
       progNotExistOrNotCompile(&serverMsg,newsockfd);
-    //Si le fichier ne compile pas
+    //If file doesn't compile
     } else if(prog.errorCompil){
-      printf("Fichier compile pas\n");
       serverMsg.state = -1;
       progNotExistOrNotCompile(&serverMsg,newsockfd);
     } else {
-      printf("Compile et existe\n");
       void *ptr = &progNum;
       struct timeval t1;
       struct timeval t2;
       gettimeofday(&t1, NULL);
-      //Redirige StdOut vers le socket    
+      //Redirect StdOut to socket   
       spipe(pipefd);
       pid_t child = fork_and_run2(execHandler,ptr,pipefd);
       sclose(pipefd[1]);
       
       int status;
-      /* pid renvoyé par le wait */
+
       swaitpid(child, &status, 0);
 
       gettimeofday(&t2, NULL);
       int executionTime = (int)(t2.tv_usec - t1.tv_usec);
-      //Si le programme ne s'est pas terminé correctement
+      //If program didn't end correctly
       if(WEXITSTATUS (status) == EXIT_FAILURE){
         serverMsg.state = 0;
       } else {
-        //On augmente le nombre d'executions et d'execution Time
         prog.numberOfExecutions ++;
         prog.time += executionTime;
         s->structProgram[clientMsg.num] = prog;
@@ -276,15 +272,15 @@ void socketHandler(void* arg1) {
   int newsockfd = *(int *)arg1;
   CommunicationClientServer clientMsg;
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
-  //Ajout fichier (+)
+  //Add file (+)
   if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
     printf("ADD FILE\n");
     createFile(newsockfd,clientMsg,shid);
-  //Remplacer programme (.)
+  //Replace file (.)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
     printf("On Remplace\n");
     replaceFile(newsockfd,clientMsg,shid);
-  //Executer programme (*,@)
+  //Execute file (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
     printf("On execute\n");
     execFile(newsockfd,clientMsg,shid);
@@ -336,7 +332,7 @@ int main (int argc, char ** argv){
       printf("Le serveur attend une connexion\n");
 
       newsockfd = saccept(sockfd);
-      //Si le socket a bien été accepté
+      //If socket has been accepted
       if (newsockfd > 0){
           void *ptr = &newsockfd;
           fork_and_run1(socketHandler,ptr);
