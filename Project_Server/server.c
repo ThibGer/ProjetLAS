@@ -12,30 +12,15 @@
 #include "../communications.h"
 
 #define BACKLOG 5
-#define PATH_SIZE 30
+#define SERVER_PORT 9502
+#define PATH_SIZE 25
+#define PROG_NAME_SIZE 5 
 
-// PRE:  ServerPort: a valid port number
-// POST: on success bind a socket to 0.0.0.0:port and listen to it
-//       return socket file descriptor
-//       on failure, displays error cause and quits the program
-int initSocketServer(int port) {
-  int sockfd  = ssocket();
 
-  /* no socket error */
-  
-  sbind(port, sockfd);
-  
-  /* no bind error */
-  slisten(sockfd, BACKLOG);
-
-  // setsockopt -> to avoid Address Already in Use
-  int option = 1;
-  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
-  
-  /* no listen error */
-  return sockfd;
-}
-
+// PRE:  arg2: the number of prog to be compiled
+// POST: on success, generate the executable in ./CodeDirectory 
+//       with the prog number
+//       on failure, EXIT_FAILURE
 void compilHandler(void* arg2){
   char *numProg = (char*)arg2;
   chdir("./CodeDirectory");
@@ -47,26 +32,42 @@ void compilHandler(void* arg2){
   exit(EXIT_FAILURE);
 }
 
+
+void execProgram(void* arg1){
+  char *progName = (char *)arg1;
+  chdir("./CodeDirectory");
+  execl(progName,progName, NULL);
+  exit(EXIT_FAILURE);
+}
+
+
+
+
+// PRE:  num: the number of prog to be save
+//       create: true to create a new program, false to replace the program
+//       sockfd: a socket file descriptor
+// POST: on success and create at true, generate the file in ./CodeDirectory with the prog number
+//       on success and create at false, replace the file in ./CodeDirectory with the prog number
+//       on failure, print Error OPEN.
 void readDataAndSave(int num, bool create,int sockfd){
   printf("ReadDataAndSave\n");
   char buffer[1000];
 
   char path[PATH_SIZE] = "./CodeDirectory/";
-  char number[6];
-
+  char number[PROG_NAME_SIZE];
   sprintf(number,"%d",num);
 
   strcat(path,number);
   strcat(path,".c");
   int fd;
   if(create){
-    fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, 0666);
+    fd = sopen(path, O_WRONLY | O_APPEND | O_CREAT, PERM);
   }else{
     //Replace
-    fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, 0666);
+    fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, PERM);
   }
   
-  //Retirer mauvais caractères à la fin du fichier.
+  //Remove bad characters at the end of the file.
   while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
     if(strlen(buffer) != 1000){  // ou 999 à tester (TODO)
       int i = strlen(buffer);
@@ -80,15 +81,20 @@ void readDataAndSave(int num, bool create,int sockfd){
   }
 
   sclose(fd);
-
 }
 
-void compilation(int num,int sockfd,StructProgram *prog){
+
+// PRE:  num: the number of prog to be compiled
+//       sockfd: a socket file descriptor
+//       prog: the shared memory of the program to be compiled
+// POST: on success, sends the client a success message.
+//       on failure, sends the client an error message.
+void compilation(int num, int sockfd, StructProgram *prog){
   printf("Compilation\n");
 
   CommunicationServerClient serverMsg;
   serverMsg.num = num;
-  char numChar[5];
+  char numChar[PROG_NAME_SIZE];
   sprintf(numChar, "%d", num);
   void *numProg = &numChar;
   int dupFd = dup2(sockfd,STDERR_FILENO);
@@ -112,7 +118,12 @@ void compilation(int num,int sockfd,StructProgram *prog){
   swrite(sockfd, &serverMsg,sizeof(serverMsg));
 }
 
-void createFile(int sockfd,CommunicationClientServer clientMsg, int shid){
+
+// PRE:  sockfd: a socket file descriptor
+//       clientMsg: communication client server to be sent
+//       shid: id of shared memory
+// POST: createFile
+void createFile(int sockfd, CommunicationClientServer clientMsg, int shid){
   int sid = sem_get(SEM_KEY, 1);
   sem_down0(sid);
 
@@ -127,8 +138,6 @@ void createFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   prog.numberOfExecutions = 0;
   prog.time = 0;
   s->structProgram[numberOfPrograms] = prog;
-  printf("j'ai passse le prog\n");
-
   readDataAndSave(numberOfPrograms,true,sockfd);
 
   s->numberOfPrograms ++;
@@ -139,7 +148,10 @@ void createFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   sem_up0(sid);
 }
 
-
+// PRE:  sockfd: a socket file descriptor
+//       clientMsg: communication client server to be sent
+//       shid: id of shared memory
+//POST:  replaceFile
 void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   int sid = sem_get(SEM_KEY, 1);
   sem_down0(sid);
@@ -190,19 +202,11 @@ void socketHandler(void* arg1) {
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
   //Ajout fichier (+)
   if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
-      printf("ADD FILE\n");
-      /*void *arg1 = &newsockfd;
-      void *arg2 = &clientMsg;
-      void *arg3 = &shid;
-      fork_and_run3(saveFileHandler,arg1,arg2,arg3);*/
-      createFile(newsockfd,clientMsg,shid);
+    printf("ADD FILE\n");
+    createFile(newsockfd,clientMsg,shid);
   //Remplacer programme (.)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
     printf("On Remplace\n");
-    /*void *arg1 = &newsockfd;
-    void *arg2 = &clientMsg;
-    void *arg3 = &shid;
-    fork_and_run3(replaceFileHandler,arg1,arg2,arg3);*/ 
     replaceFile(newsockfd,clientMsg,shid);
 
   //Executer programme (*,@)
@@ -211,7 +215,7 @@ void socketHandler(void* arg1) {
     int dupFd = -1;
     chdir("./CodeDirectory");
     struct stat statStruct;
-    char progName[5];
+    char progName[PROG_NAME_SIZE];
     char progNum[3];
     sprintf(progName, "%d", clientMsg.num);
     sprintf(progNum, "%d", clientMsg.num);
@@ -270,6 +274,31 @@ void socketHandler(void* arg1) {
     }
 
 
+}
+
+
+
+
+// PRE:  ServerPort: a valid port number
+// POST: on success bind a socket to 0.0.0.0:port and listen to it
+//       return socket file descriptor
+//       on failure, displays error cause and quits the program
+int initSocketServer(int port) {
+  int sockfd  = ssocket();
+
+  /* no socket error */
+  
+  sbind(port, sockfd);
+  
+  /* no bind error */
+  slisten(sockfd, BACKLOG);
+
+  // setsockopt -> to avoid Address Already in Use
+  int option = 1;
+  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
+  
+  /* no listen error */
+  return sockfd;
 }
 
 
