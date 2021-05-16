@@ -205,8 +205,6 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   sem_up0(sid);
 }
 
-
-
 // PRE: serverMsg : a pointer of CommunicationServerClient struct
 //      newsockfd : a valid client socket
 // POST: set executionTime and returnCode to -1
@@ -214,33 +212,16 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
 void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockfd){
     serverMsg->executionTime = -1;
     serverMsg->returnCode = -1;
-    char fileDoesntExist[1] = "";
-    nwrite(newsockfd,fileDoesntExist,sizeof(fileDoesntExist));
+    char blank[1] = "";
+    nwrite(newsockfd,blank,sizeof(blank));
 }
 
-// PRE: arg1 : a void pointer of a client sokcket
-// POST: write a server msg on client socket
-void socketHandler(void* arg1) {
-  //Get shared memory
-  int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
-
-  int newsockfd = *(int *)arg1;
-  CommunicationClientServer clientMsg;
-  CommunicationServerClient serverMsg;
-  sread(newsockfd,&clientMsg,sizeof(clientMsg));
-  //Ajout fichier (+)
-  if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
-    printf("ADD FILE\n");
-    createFile(newsockfd,clientMsg,shid);
-  //Remplacer programme (.)
-  } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
-    printf("On Remplace\n");
-    replaceFile(newsockfd,clientMsg,shid);
-
-  //Executer programme (*,@)
-  } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
+// PRE:  newsockfd: a socket file descriptor
+//       clientMsg: communication client server to be sent
+//       shid: id of shared memory
+//POST:  execFile
+void execFile(int newsockfd, CommunicationClientServer clientMsg, int shid){
     int pipefd[2];
-    printf("On execute\n");
     chdir("./CodeDirectory");
     struct stat statStruct;
     char progName[PROG_NAME_SIZE];
@@ -251,6 +232,9 @@ void socketHandler(void* arg1) {
     int fileExist = stat(progName, &statStruct);
     MainStruct *s = sshmat(shid);
     StructProgram prog = s->structProgram[clientMsg.num];
+    CommunicationServerClient serverMsg;
+    int sid = sem_get(SEM_KEY, 1);
+    sem_down0(sid);
     //Si le fichier n'existe pas
     if(fileExist < 0) {
       printf("Fichier existe pas\n");
@@ -267,16 +251,11 @@ void socketHandler(void* arg1) {
       struct timeval t1;
       struct timeval t2;
       gettimeofday(&t1, NULL);
-      //Redirige StdOut vers le socket
-
-      
-
-     
+      //Redirige StdOut vers le socket     
       spipe(pipefd);
       pid_t child = fork_and_run2(execHandler,ptr,pipefd);
       sclose(pipefd[1]);
       
-
       int status;
       /* pid renvoyé par le wait */
       swaitpid(child, &status, 0);
@@ -287,33 +266,50 @@ void socketHandler(void* arg1) {
       if(WEXITSTATUS (status) == EXIT_FAILURE){
         serverMsg.state = 0;
       } else {
-        int sid = sem_get(SEM_KEY, 1);
-        sem_down0(sid);
         //On augmente le nombre d'executions et d'execution Time
         prog.numberOfExecutions ++;
         prog.time += executionTime;
         s->structProgram[clientMsg.num] = prog;
-        sem_up0(sid);
         serverMsg.state = 1;
       }
       serverMsg.returnCode = WEXITSTATUS (status);
       serverMsg.executionTime = executionTime;
 
     }
-      serverMsg.num = clientMsg.num;
+    sshmdt(s);
+    sem_up0(sid);
+    serverMsg.num = clientMsg.num;
+    nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
+    //TODO
+    char line[BUFFER_SIZE];
+    sread(pipefd[0],line,BUFFER_SIZE);
+    swrite(newsockfd, line,sizeof(line));
 
-     
+    sclose(pipefd[0]);
+}
 
-      nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
-       //TODO
-      char line[BUFFER_SIZE];
-      sread(pipefd[0],line,BUFFER_SIZE);
-      swrite(newsockfd, line,sizeof(line));
+// PRE: arg1 : a void pointer of a client sokcket
+// POST: Handle the socket client
+void socketHandler(void* arg1) {
+  //Get shared memory
+  int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
 
-      sclose(pipefd[0]);
-    }
-
-
+  int newsockfd = *(int *)arg1;
+  CommunicationClientServer clientMsg;
+  sread(newsockfd,&clientMsg,sizeof(clientMsg));
+  //Ajout fichier (+)
+  if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
+    printf("ADD FILE\n");
+    createFile(newsockfd,clientMsg,shid);
+  //Remplacer programme (.)
+  } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
+    printf("On Remplace\n");
+    replaceFile(newsockfd,clientMsg,shid);
+  //Executer programme (*,@)
+  } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
+    printf("On execute\n");
+    execFile(newsockfd,clientMsg,shid);
+  }
 }
 
 
