@@ -23,9 +23,9 @@ char* addr;
 //       return socket file descriptor
 //       on failure, displays error cause and quits the program
 int initSocketClient(char ServerIP[16], int Serverport) {
-  int sockfd = ssocket();
-  sconnect(ServerIP, Serverport, sockfd);
-  return sockfd;
+	int sockfd = ssocket();
+	sconnect(ServerIP, Serverport, sockfd);
+	return sockfd;
 }
 
 
@@ -48,18 +48,18 @@ void readServerMessage(int sockfd) {
 //      filePath : the path of the file to upload
 // POST: send the file's text through the socket
 void uploadFile(int sockfd, char* filePath){
-  int fd = sopen(filePath,O_RDONLY,0100);
+	int fd = sopen(filePath,O_RDONLY,0100);
 
-  char buffer[BUFFERSIZE];
-  int n = sread(fd,buffer,BUFFERSIZE * sizeof(char));
-  while(n > 0){
-    swrite(sockfd,buffer,n * sizeof(char));
-    n = sread(fd,buffer,BUFFERSIZE * sizeof(char));
-  }
-  int s = shutdown(sockfd,SHUT_WR); 
-  checkNeg(s, "ERROR SHUTDOWN");
+	char buffer[BUFFERSIZE];
+	int n = sread(fd,buffer,BUFFERSIZE * sizeof(char));
+	while(n > 0){
+		swrite(sockfd,buffer,n * sizeof(char));
+		n = sread(fd,buffer,BUFFERSIZE * sizeof(char));
+	}
+	int s = shutdown(sockfd,SHUT_WR); 
+	checkNeg(s, "ERROR SHUTDOWN");
 
-  sclose(fd);
+	sclose(fd);
 }
 
 
@@ -106,7 +106,7 @@ void replaceFile(int num, char* filePath) {
 
 	//find the last occur of '/' in the filePath to get the fileName
 	char* fileName = strrchr(filePath, '/')+1;
-			
+	
 	CommunicationClientServer msg;
 	msg.num = num;
 	msg.nbCharFilename = strlen(fileName);
@@ -186,7 +186,7 @@ void timer(void *arg1, void* arg2) {
 //***************************************************************************
 // RECUREXEC
 //***************************************************************************
- 
+
 void recurExec(void *arg1) {
 	int *pipefd = arg1;
 
@@ -219,7 +219,7 @@ void recurExec(void *arg1) {
 
 // signal to close timer's pipe
 void sigusr1_handler() {
-  end = 1;
+	end = 1;
 }
 
 

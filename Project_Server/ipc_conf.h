@@ -14,11 +14,11 @@
 
 
 typedef struct {
-  int num;
-  char name[MAX_NAME];
-  bool errorCompil;
-  int numberOfExecutions;
-  int time;
+	int num;
+	char name[MAX_NAME];
+	bool errorCompil;
+	int numberOfExecutions;
+	int time;
 } StructProgram;
 
 typedef struct {

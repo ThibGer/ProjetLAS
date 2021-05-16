@@ -85,7 +85,7 @@ void readDataAndSave(int num, int sockfd){
   strcat(path,number);
   strcat(path,".c");
   int fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, PERM);
- 
+  
   char buffer[BUFFERSIZE];
   int n = sread(sockfd,buffer,BUFFERSIZE * sizeof(char));
   while(n > 0){
@@ -193,8 +193,8 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
 // POST: set executionTime and returnCode to -1
 //       write empty string on client socket
 void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockfd){
-    serverMsg->executionTime = -1;
-    serverMsg->returnCode = -1;
+  serverMsg->executionTime = -1;
+  serverMsg->returnCode = -1;
 }
 
 // PRE:  newsockfd: a socket file descriptor
@@ -202,67 +202,67 @@ void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockf
 //       shid: id of shared memory
 //POST:  execFile
 void execFile(int newsockfd, CommunicationClientServer clientMsg, int shid){
-    int pipefd[2];
-    chdir("./CodeDirectory");
-    struct stat statStruct;
-    char progName[PROG_NAME_SIZE];
-    char progNum[3];
-    sprintf(progName, "%d", clientMsg.num);
-    sprintf(progNum, "%d", clientMsg.num);
-    strcat(progName,".c");
-    int fileExist = stat(progName, &statStruct);
-    MainStruct *s = sshmat(shid);
-    StructProgram prog = s->structProgram[clientMsg.num];
-    CommunicationServerClient serverMsg;
-    int sid = sem_get(SEM_KEY, 1);
-    sem_down0(sid);
+  int pipefd[2];
+  chdir("./CodeDirectory");
+  struct stat statStruct;
+  char progName[PROG_NAME_SIZE];
+  char progNum[3];
+  sprintf(progName, "%d", clientMsg.num);
+  sprintf(progNum, "%d", clientMsg.num);
+  strcat(progName,".c");
+  int fileExist = stat(progName, &statStruct);
+  MainStruct *s = sshmat(shid);
+  StructProgram prog = s->structProgram[clientMsg.num];
+  CommunicationServerClient serverMsg;
+  int sid = sem_get(SEM_KEY, 1);
+  sem_down0(sid);
     //If file doesn't exist
-    if(fileExist < 0) {
-      serverMsg.state = -2;
-      progNotExistOrNotCompile(&serverMsg,newsockfd);
+  if(fileExist < 0) {
+    serverMsg.state = -2;
+    progNotExistOrNotCompile(&serverMsg,newsockfd);
     //If file doesn't compile
-    } else if(prog.errorCompil){
-      serverMsg.state = -1;
-      progNotExistOrNotCompile(&serverMsg,newsockfd);
-    } else {
-      void *ptr = &progNum;
-      struct timeval t1;
-      struct timeval t2;
-      gettimeofday(&t1, NULL);
+  } else if(prog.errorCompil){
+    serverMsg.state = -1;
+    progNotExistOrNotCompile(&serverMsg,newsockfd);
+  } else {
+    void *ptr = &progNum;
+    struct timeval t1;
+    struct timeval t2;
+    gettimeofday(&t1, NULL);
       //Redirect StdOut to socket   
-      spipe(pipefd);
-      pid_t child = fork_and_run2(execHandler,ptr,pipefd);
-      sclose(pipefd[1]);
-      
-      int status;
+    spipe(pipefd);
+    pid_t child = fork_and_run2(execHandler,ptr,pipefd);
+    sclose(pipefd[1]);
+    
+    int status;
 
-      swaitpid(child, &status, 0);
+    swaitpid(child, &status, 0);
 
-      gettimeofday(&t2, NULL);
-      int executionTime = (int)(t2.tv_usec - t1.tv_usec);
+    gettimeofday(&t2, NULL);
+    int executionTime = (int)(t2.tv_usec - t1.tv_usec);
       //If program didn't end correctly
-      if(WEXITSTATUS (status) == EXIT_FAILURE){
-        serverMsg.state = 0;
-      } else {
-        prog.numberOfExecutions ++;
-        prog.time += executionTime;
-        s->structProgram[clientMsg.num] = prog;
-        serverMsg.state = 1;
-      }
-      serverMsg.returnCode = WEXITSTATUS (status);
-      serverMsg.executionTime = executionTime;
-
+    if(WEXITSTATUS (status) == EXIT_FAILURE){
+      serverMsg.state = 0;
+    } else {
+      prog.numberOfExecutions ++;
+      prog.time += executionTime;
+      s->structProgram[clientMsg.num] = prog;
+      serverMsg.state = 1;
     }
-    sshmdt(s);
-    sem_up0(sid);
-    serverMsg.num = clientMsg.num;
-    nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
-    sendMessage(pipefd,newsockfd);
+    serverMsg.returnCode = WEXITSTATUS (status);
+    serverMsg.executionTime = executionTime;
 
-    sclose(pipefd[0]);
+  }
+  sshmdt(s);
+  sem_up0(sid);
+  serverMsg.num = clientMsg.num;
+  nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
+  sendMessage(pipefd,newsockfd);
+
+  sclose(pipefd[0]);
 }
 
-// PRE: arg1 : a void pointer of a client sokcket
+// PRE: arg1 : a void pointer of a client socket
 // POST: Handle the socket client
 void socketHandler(void* arg1) {
   //Get shared memory
@@ -315,9 +315,9 @@ int initSocketServer(int port) {
 int main (int argc, char ** argv){
   
   if(argc != 2){
-		perror("Le port est attendu");
-		exit(EXIT_FAILURE);
-	}
+    perror("Le port est attendu");
+    exit(EXIT_FAILURE);
+  }
   int port = atoi(argv[1]);
   int sockfd, newsockfd;
 
@@ -325,13 +325,13 @@ int main (int argc, char ** argv){
   printf("Le serveur tourne sur le port : %i \n",port);
 
   while (1){
-      printf("Le serveur attend une connexion\n");
+    printf("Le serveur attend une connexion\n");
 
-      newsockfd = saccept(sockfd);
+    newsockfd = saccept(sockfd);
       //If socket has been accepted
-      if (newsockfd > 0){
-          void *ptr = &newsockfd;
-          fork_and_run1(socketHandler,ptr);
-      }
+    if (newsockfd > 0){
+      void *ptr = &newsockfd;
+      fork_and_run1(socketHandler,ptr);
+    }
   }
 }
