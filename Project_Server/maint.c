@@ -14,7 +14,7 @@
 int main (int argc, char *argv[]) {
   if(argc < 2){
     perror("Un argument est attendu.");
-    exit(1);
+    exit(EXIT_FAILURE);
   } 
 
   if(atoi(argv[1]) == 1){
@@ -33,7 +33,7 @@ int main (int argc, char *argv[]) {
   } else if(atoi(argv[1]) == 3){
     if(argc != 3){
       perror("Une durée est nécessaire afin de réserver la mémoire de façon exclusive.");
-      exit(1);
+      exit(EXIT_FAILURE);
     }
     int sid = sem_get(SEM_KEY, 1);
     sem_down0(sid);
@@ -41,5 +41,5 @@ int main (int argc, char *argv[]) {
     sem_up0(sid);
 
   }
-  
+  exit(EXIT_SUCCESS);
 }
