@@ -168,8 +168,12 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   sem_up0(sid);
 }
 
-
-
+void execHandler(void* arg1){
+  char *progName = (char *)arg1;
+  chdir("./CodeDirectory");
+  execl(progName,progName, NULL);
+  exit(EXIT_FAILURE);
+}
 
 void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockfd){
     serverMsg->executionTime = -1;
@@ -227,7 +231,7 @@ void socketHandler(void* arg1) {
       gettimeofday(&t1, NULL);
       //Redirige StdOut vers le socket
       dupFd = dup2(newsockfd,1);
-      pid_t child = fork_and_run1(execProgram,ptr);
+      pid_t child = fork_and_run1(execHandler,ptr);
       sclose(dupFd);
 
       int status;
@@ -289,11 +293,17 @@ int initSocketServer(int port) {
 
 
 int main (int argc, char ** argv){
+  
+  if(argc != 2){
+		perror("Le port est attendu");
+		exit(EXIT_FAILURE);
+	}
+  int port = atoi(argv[1]);
   int sockfd, newsockfd;
 
   //Pour plus tard : remplacer la constante SERVER_PORT par le premier argument
-  sockfd = initSocketServer(SERVER_PORT);
-  printf("Le serveur tourne sur le port : %i \n",SERVER_PORT);
+  sockfd = initSocketServer(port);
+  printf("Le serveur tourne sur le port : %i \n",port);
 
   while (1){
       printf("Le serveur attend une connexion\n");
