@@ -32,15 +32,16 @@ void compilHandler(void* arg2){
   exit(EXIT_FAILURE);
 }
 
-
-void execProgram(void* arg1){
+// PRE: arg1 : a void pointer of a name of an executable
+// POST: execute the program
+// RES:  return exit code of program in case of success
+//       or EXIT_FAILURE code in case of failure
+void execHandler(void* arg1){
   char *progName = (char *)arg1;
   chdir("./CodeDirectory");
   execl(progName,progName, NULL);
   exit(EXIT_FAILURE);
 }
-
-
 
 
 // PRE:  num: the number of prog to be save
@@ -168,16 +169,7 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   sem_up0(sid);
 }
 
-// PRE: arg1 : a void pointer of a name of an executable
-// POST: execute the program
-// RES:  return exit code of program in case of success
-//       or EXIT_FAILURE code in case of failure
-void execHandler(void* arg1){
-  char *progName = (char *)arg1;
-  chdir("./CodeDirectory");
-  execl(progName,progName, NULL);
-  exit(EXIT_FAILURE);
-}
+
 
 // PRE: serverMsg : a pointer of CommunicationServerClient struct
 //      newsockfd : a valid client socket
