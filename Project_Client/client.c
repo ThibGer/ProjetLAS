@@ -34,8 +34,11 @@ int initSocketClient(char ServerIP[16], int Serverport) {
 // POST: read and print the text
 void readServerMessage(int sockfd) {
 	char buffer[BUFFERSIZE];
-	while(sread(sockfd,buffer,BUFFERSIZE * sizeof(char)) != 0){
-		printf("%s\n",buffer);
+	int n = sread(sockfd,buffer,BUFFERSIZE * sizeof(char));
+	while(n > 0){
+		//printf("%s\n",buffer);
+		nwrite(1,buffer,n * sizeof(char));
+		n = sread(sockfd,buffer,BUFFERSIZE * sizeof(char));
 	}
 }
 

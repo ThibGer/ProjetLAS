@@ -62,22 +62,23 @@ void execHandler(void* arg1,void* arg2){
 
 
 // PRE: sockfd : a socket file descriptor
+//      pipefd : pipe
 // POST: read and return the text sent through the socket
 void sendMessage(int *pipefd,int sockfd) {
-  char buffer[BUFFERSIZE];
-  int n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
+  char buffer[10];
+  int n = sread(pipefd[0],buffer,10 * sizeof(char));
   while(n > 0){
-    swrite(sockfd,buffer,n * sizeof(char));
-    n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
+    printf("buffer = %s\n",buffer);
+    nwrite(sockfd,buffer,n * sizeof(char));
+    n = sread(pipefd[0],buffer,10 * sizeof(char));
   }
 }
 
 
 
 // PRE:  num: the number of prog to be save
-//       create: true to create a new program, false to replace the program
 //       sockfd: a socket file descriptor
-// POST: on success and create at true, generate the file in ./CodeDirectory with the prog number
+// POST: on success generate the file in ./CodeDirectory with the prog number
 //       on failure, print Error OPEN.
 void readDataAndSave(int num, int sockfd){
 
@@ -135,7 +136,7 @@ void compilation(int num, int sockfd, StructProgram *prog){
     prog->errorCompil = false;
   }
   
-  swrite(sockfd, &serverMsg,sizeof(serverMsg));
+  nwrite(sockfd, &serverMsg,sizeof(serverMsg));
 
 
 
