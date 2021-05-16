@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 
-int main(){
+int main({
     printf("Hello World\n");
-    exit(127);
 }
