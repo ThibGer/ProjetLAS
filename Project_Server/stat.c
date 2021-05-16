@@ -11,7 +11,7 @@ int main (int argc, char *argv[]) {
 
 	if( argc != 2 || atoi(argv[1]) < 0 || atoi(argv[1]) > 999 ){
 		perror("Un argument au bon format est attendu.");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);

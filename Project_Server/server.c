@@ -59,8 +59,8 @@ void execHandler(void* arg1,void* arg2){
 }
 
 
-// PRE: sockfd : a socket file descriptor
-//      pipefd : pipe
+// PRE: pipefd : pipe
+//      sockfd : a socket file descriptor
 // POST: read and return the text sent through the socket
 void sendMessage(int *pipefd,int sockfd) {
   char buffer[BUFFERSIZE];
