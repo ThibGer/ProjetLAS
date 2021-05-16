@@ -90,11 +90,9 @@ void addFile(char* filePath) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	//char* errorMessage = readMessage(sockfd);
-	char buffer[BUFFERSIZE];
-	if(serverMsg.state != 0){
-		sread(sockfd,&buffer,sizeof(buffer));
-	}
+	char* errorMessage = readMessage(sockfd);
+	//char buffer[BUFFERSIZE]; //FOR DEBUG
+	//sread(sockfd,&buffer,sizeof(buffer)); //FOR DEBUG
 	
 
 
@@ -102,7 +100,10 @@ void addFile(char* filePath) {
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
 	printf("   Message d'erreur: \n\n");
-	printf("%s\n", buffer);
+	if(serverMsg.state != 0){
+		printf("%s\n", errorMessage);
+	}
+	//printf("%s\n", buffer); //FOR DEBUG
 	printf("\n----------------------------------------------- \n\n");
 }
 
@@ -132,7 +133,9 @@ void replaceFile(int num, char* filePath) {
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
 	printf("   Message d'erreur: \n\n");
-	printf("%s\n", errorMessage);
+	if(serverMsg.state != 0){
+		printf("%s\n", errorMessage);
+	}
 	printf("\n----------------------------------------------- \n\n");
 }
 
@@ -149,9 +152,9 @@ void execProg(int num) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	//char* stdoutMsg = readMessage(sockfd);
-	char buffer[BUFFERSIZE];
-	sread(sockfd,&buffer,sizeof(buffer));
+	char* stdoutMsg = readMessage(sockfd);
+	//char buffer[BUFFERSIZE]; //FOR DEBUG
+	//sread(sockfd,&buffer,sizeof(buffer)); //FOR DEBUG
 	
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
@@ -159,7 +162,8 @@ void execProg(int num) {
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
 	printf("   Sortie standard: \n\n");
-	printf("%s\n", buffer);
+	printf("%s\n", stdoutMsg);
+	//printf("%s\n", buffer); //FOR DEBUG
 	printf("\n-----------------------------------------------\n");
 }
 
