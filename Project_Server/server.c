@@ -66,7 +66,6 @@ void sendMessage(int *pipefd,int sockfd) {
   char buffer[BUFFERSIZE];
   int n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
   while(n > 0){
-    printf("buffer = %s\n",buffer);
     nwrite(sockfd,buffer,n * sizeof(char));
     n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
   }
@@ -219,16 +218,13 @@ void execFile(int newsockfd, CommunicationClientServer clientMsg, int shid){
     sem_down0(sid);
     //Si le fichier n'existe pas
     if(fileExist < 0) {
-      printf("Fichier existe pas\n");
       serverMsg.state = -2;
       progNotExistOrNotCompile(&serverMsg,newsockfd);
     //Si le fichier ne compile pas
     } else if(prog.errorCompil){
-      printf("Fichier compile pas\n");
       serverMsg.state = -1;
       progNotExistOrNotCompile(&serverMsg,newsockfd);
     } else {
-      printf("Compile et existe\n");
       void *ptr = &progNum;
       struct timeval t1;
       struct timeval t2;
@@ -278,15 +274,12 @@ void socketHandler(void* arg1) {
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
   //Ajout fichier (+)
   if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
-    printf("ADD FILE\n");
     createFile(newsockfd,clientMsg,shid);
   //Remplacer programme (.)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
-    printf("On Remplace\n");
     replaceFile(newsockfd,clientMsg,shid);
   //Executer programme (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
-    printf("On execute\n");
     execFile(newsockfd,clientMsg,shid);
   }
   int s = shutdown(newsockfd,SHUT_WR); 
