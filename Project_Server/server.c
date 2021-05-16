@@ -21,14 +21,21 @@
 // POST: on success, generate the executable in ./CodeDirectory 
 //       with the prog number
 //       on failure, EXIT_FAILURE
-void compilHandler(void* arg2){
-  char *numProg = (char*)arg2;
+void compilHandler(void* arg1,void* arg2){
+
+  char *numProg = (char*) arg1;
+  int *pipefd = arg2; 
+
+  sclose(pipefd[0]);
+
   chdir("./CodeDirectory");
-  
   char path[PATH_SIZE];
   strcpy(path,numProg);
   strcat(path,".c");
+
+  dup2(pipefd[1],STDERR_FILENO);
   execl("/usr/bin/gcc","gcc", "-o", numProg, path, NULL);
+  sclose(pipefd[1]);
   exit(EXIT_FAILURE);
 }
 
@@ -36,10 +43,19 @@ void compilHandler(void* arg2){
 // POST: execute the program
 // RES:  return exit code of program in case of success
 //       or EXIT_FAILURE code in case of failure
-void execHandler(void* arg1){
+void execHandler(void* arg1,void* arg2){
   char *progName = (char *)arg1;
+  int *pipefd = arg2; 
+
+  sclose(pipefd[0]);
+  int saved_stdout = dup(STDOUT_FILENO);
+  dup2(pipefd[1],STDOUT_FILENO);
+
   chdir("./CodeDirectory");
   execl(progName,progName, NULL);
+  sclose(pipefd[1]);
+  dup2(saved_stdout, STDOUT_FILENO);
+  close(saved_stdout);
   exit(EXIT_FAILURE);
 }
 
@@ -97,10 +113,19 @@ void compilation(int num, int sockfd, StructProgram *prog){
   serverMsg.num = num;
   char numChar[PROG_NAME_SIZE];
   sprintf(numChar, "%d", num);
+  
+
+
+  int pipefd[2];
+  spipe(pipefd);
+
+
   void *numProg = &numChar;
-  int dupFd = dup2(sockfd,STDERR_FILENO);
-  pid_t pidCompil = fork_and_run1(compilHandler,numProg);
-  sclose(dupFd);
+  
+  pid_t pidCompil = fork_and_run2(compilHandler,numProg,pipefd);
+  sclose(pipefd[1]);
+
+
   int status;
   swaitpid(pidCompil,&status,0);
 
@@ -117,6 +142,17 @@ void compilation(int num, int sockfd, StructProgram *prog){
   }
   
   swrite(sockfd, &serverMsg,sizeof(serverMsg));
+
+  char line[BUFFER_SIZE];
+
+  
+  //TODO
+  sread(pipefd[0],line,BUFFER_SIZE);
+  printf("PIPE %s\n",line);
+  swrite(sockfd, line,sizeof(line));
+
+
+  sclose(pipefd[0]);
 }
 
 
@@ -203,8 +239,8 @@ void socketHandler(void* arg1) {
 
   //Executer programme (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
+    int pipefd[2];
     printf("On execute\n");
-    int dupFd = -1;
     chdir("./CodeDirectory");
     struct stat statStruct;
     char progName[PROG_NAME_SIZE];
@@ -232,9 +268,14 @@ void socketHandler(void* arg1) {
       struct timeval t2;
       gettimeofday(&t1, NULL);
       //Redirige StdOut vers le socket
-      dupFd = dup2(newsockfd,1);
-      pid_t child = fork_and_run1(execHandler,ptr);
-      sclose(dupFd);
+
+      
+
+     
+      spipe(pipefd);
+      pid_t child = fork_and_run2(execHandler,ptr,pipefd);
+      sclose(pipefd[1]);
+      
 
       int status;
       /* pid renvoyé par le wait */
@@ -260,9 +301,16 @@ void socketHandler(void* arg1) {
 
     }
       serverMsg.num = clientMsg.num;
+
+     
+
       nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
-      //if(dupFd != -1)
-        //sclose(dupFd);
+       //TODO
+      char line[BUFFER_SIZE];
+      sread(pipefd[0],line,BUFFER_SIZE);
+      swrite(newsockfd, line,sizeof(line));
+
+      sclose(pipefd[0]);
     }
 
 

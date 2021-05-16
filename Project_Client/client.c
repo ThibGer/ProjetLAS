@@ -90,12 +90,19 @@ void addFile(char* filePath) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	char* errorMessage = readMessage(sockfd);
+	//char* errorMessage = readMessage(sockfd);
+	char buffer[BUFFERSIZE];
+	if(serverMsg.state != 0){
+		sread(sockfd,&buffer,sizeof(buffer));
+	}
+	
+
+
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
 	printf("   Message d'erreur: \n\n");
-	printf("%s\n", errorMessage);
+	printf("%s\n", buffer);
 	printf("\n----------------------------------------------- \n\n");
 }
 
@@ -142,14 +149,17 @@ void execProg(int num) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	char* stdoutMsg = readMessage(sockfd);
+	//char* stdoutMsg = readMessage(sockfd);
+	char buffer[BUFFERSIZE];
+	sread(sockfd,&buffer,sizeof(buffer));
+	
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   État du programme: %d\n", serverMsg.state);
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
 	printf("   Sortie standard: \n\n");
-	printf("%s\n", stdoutMsg);
+	printf("%s\n", buffer);
 	printf("\n-----------------------------------------------\n");
 }
 
