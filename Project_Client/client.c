@@ -31,23 +31,12 @@ int initSocketClient(char ServerIP[16], int Serverport) {
 
 
 // PRE: sockfd : a socket file descriptor
-// POST: read and return the text sent through the socket
-char* readMessage(int sockfd) {
-	char* message;
-	if ((message = (char*)malloc(1*sizeof(char))) == NULL) {
-    	perror("ERREUR: Allocation dynamique de message impossible!");
-    	exit(1);
-	}
+// POST: read and print the text
+void readServerMessage(int sockfd) {
 	char buffer[BUFFERSIZE];
 	while(sread(sockfd,&buffer,sizeof(buffer)) != 0){
-		int size = strlen(message) + strlen(buffer);
-		if ((message = (char*)realloc(message, size*sizeof(char*))) == NULL) {
-		    perror("ERREUR: Reallocation dynamique de message impossible!");
-		    exit(1);
-		}
-		strcat(message, buffer);
+		printf("%s\n",buffer);
 	}
-	return message;
 }
 
 
@@ -90,20 +79,16 @@ void addFile(char* filePath) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	//char* errorMessage = readMessage(sockfd);
-	char buffer[BUFFERSIZE];
-	if(serverMsg.state != 0){
-		sread(sockfd,&buffer,sizeof(buffer));
-	}
 	
-
-
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
-	printf("   Message d'erreur: \n\n");
-	printf("%s\n", buffer);
+	if(serverMsg.state != 0){
+		printf("   Message d'erreur: \n\n");
+		readServerMessage(sockfd);	
+	}
 	printf("\n----------------------------------------------- \n\n");
+	
 }
 
 
@@ -127,12 +112,13 @@ void replaceFile(int num, char* filePath) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	char* errorMessage = readMessage(sockfd);
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   Compilation programme: %d\n", serverMsg.state);
-	printf("   Message d'erreur: \n\n");
-	printf("%s\n", errorMessage);
+	if(serverMsg.state != 0){
+		printf("   Message d'erreur: \n\n");
+		readServerMessage(sockfd);	
+	}
 	printf("\n----------------------------------------------- \n\n");
 }
 
@@ -149,17 +135,15 @@ void execProg(int num) {
 
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
-	//char* stdoutMsg = readMessage(sockfd);
-	char buffer[BUFFERSIZE];
-	sread(sockfd,&buffer,sizeof(buffer));
 	
 	printf("\n-----------------------------------------------\nRéponse du serveur:\n");
 	printf("   Numéro du programme: %d\n", serverMsg.num);
 	printf("   État du programme: %d\n", serverMsg.state);
 	printf("   Temps d'exécution: %d\n", serverMsg.executionTime);
 	printf("   Code de retour: %d\n", serverMsg.returnCode);
-	printf("   Sortie standard: \n\n");
-	printf("%s\n", buffer);
+	printf("   Sortie standard: \n\n");		
+	readServerMessage(sockfd);	
+	
 	printf("\n-----------------------------------------------\n");
 }
 
@@ -267,8 +251,6 @@ int main(int argc, char **argv){
 		}
 		/* replace a C file to the server */
 		else if (command == '.') {
-			printf("param AVANT |%s|\n",param);
-
 			//split 2 parameters
 			char* spaceAddress = strchr(param, ' ');
 			char* filePath = spaceAddress+1;

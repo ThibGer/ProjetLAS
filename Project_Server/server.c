@@ -15,6 +15,7 @@
 #define SERVER_PORT 9502
 #define PATH_SIZE 25
 #define PROG_NAME_SIZE 5 
+#define BUFFERSIZE 300
 
 
 // PRE:  arg2: the number of prog to be compiled
@@ -58,6 +59,17 @@ void execHandler(void* arg1,void* arg2){
   close(saved_stdout);
   exit(EXIT_FAILURE);
 }
+
+
+// PRE: sockfd : a socket file descriptor
+// POST: read and return the text sent through the socket
+void sendMessage(int *pipefd,int sockfd) {
+  char buffer[BUFFERSIZE];
+  while(sread(pipefd[0],&buffer,sizeof(buffer)) != 0){
+    swrite(sockfd,buffer,sizeof(buffer));
+  }
+}
+
 
 
 // PRE:  num: the number of prog to be save
@@ -143,14 +155,10 @@ void compilation(int num, int sockfd, StructProgram *prog){
   
   swrite(sockfd, &serverMsg,sizeof(serverMsg));
 
-  char line[BUFFER_SIZE];
+  sendMessage(pipefd,sockfd);
 
-  
-  //TODO
-  sread(pipefd[0],line,BUFFER_SIZE);
-  printf("PIPE %s\n",line);
-  swrite(sockfd, line,sizeof(line));
-
+  int s = shutdown(sockfd,SHUT_WR); 
+  checkNeg(s, "ERROR SHUTDOWN");
 
   sclose(pipefd[0]);
 }
@@ -268,10 +276,6 @@ void socketHandler(void* arg1) {
       struct timeval t2;
       gettimeofday(&t1, NULL);
       //Redirige StdOut vers le socket
-
-      
-
-     
       spipe(pipefd);
       pid_t child = fork_and_run2(execHandler,ptr,pipefd);
       sclose(pipefd[1]);
