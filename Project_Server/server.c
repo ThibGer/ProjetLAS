@@ -61,10 +61,10 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
   //Stock dans la mémoire partagée
   MainStruct *s = sshmat(shid);
   int numberOfPrograms = s->numberOfPrograms;
-  StructProgram prog;
+  StructProgram prog = s->structProgram[numberOfPrograms];
   prog.num = numberOfPrograms;
   strcpy(prog.name,clientMsg.filename);
-
+  
   prog.errorCompil = false;
   prog.numberOfExecutions = 0;
   prog.time = 0;
@@ -114,7 +114,7 @@ void saveFileHandler(void* arg1, void* arg2, void* arg3){
     prog.errorCompil = false;
   }
 
-  s->structProgram[numberOfPrograms] = prog;
+
 
 
 
@@ -133,12 +133,6 @@ void execProgram(void* arg1){
   exit(EXIT_FAILURE);
 }
 
-void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockfd){
-    serverMsg->executionTime = -1;
-    serverMsg->returnCode = -1;
-    char fileDoesntExist[1] = "";
-    nwrite(newsockfd,fileDoesntExist,sizeof(fileDoesntExist));
-}
 
 void socketHandler(void* arg1) {
   //Get shared memory
@@ -165,34 +159,26 @@ void socketHandler(void* arg1) {
     int dupFd = -1;
     chdir("./CodeDirectory");
     struct stat statStruct;
-    char progName[5];
-    char progNum[3];
+    char progName[3];
     sprintf(progName, "%d", clientMsg.num);
-    sprintf(progNum, "%d", clientMsg.num);
-    strcat(progName,".c");
     int fileExist = stat(progName, &statStruct);
-    MainStruct *s = sshmat(shid);
-    StructProgram prog = s->structProgram[clientMsg.num];
+
     //Si le fichier n'existe pas
-    if(fileExist < 0) {
-      printf("Fichier existe pas\n");
+    if(fileExist < 0){
       serverMsg.state = -2;
-      progNotExistOrNotCompile(&serverMsg,newsockfd);
-    //Si le fichier ne compile pas
-    } else if(prog.errorCompil){
-      printf("Fichier compile pas\n");
-      serverMsg.state = -1;
-      progNotExistOrNotCompile(&serverMsg,newsockfd);
+      serverMsg.executionTime = -1;
+      serverMsg.returnCode = -1;
+      char fileDoesntExist[1] = "";
+      nwrite(newsockfd,fileDoesntExist,sizeof(fileDoesntExist));
+    // TODO VOIR SI FICHIER COMPILE DANS MEMOIRE PARTAGEE
     } else {
-      printf("Compile et existe\n");
-      void *ptr = &progNum;
+      void *ptr = &progName;
       struct timeval t1;
       struct timeval t2;
       gettimeofday(&t1, NULL);
       //Redirige StdOut vers le socket
       dupFd = dup2(newsockfd,1);
       pid_t child = fork_and_run1(execProgram,ptr);
-      sclose(dupFd);
 
       int status;
       /* pid renvoyé par le wait */
@@ -201,15 +187,16 @@ void socketHandler(void* arg1) {
       gettimeofday(&t2, NULL);
       int executionTime = (int)(t2.tv_usec - t1.tv_usec);
       //Si le programme ne s'est pas terminé correctement
-      if(WEXITSTATUS (status) == EXIT_FAILURE){
+      if(WEXITSTATUS (status) != 0){
         serverMsg.state = 0;
       } else {
         int sid = sem_get(SEM_KEY, 1);
         sem_down0(sid);
-        //On augmente le nombre d'executions et d'execution Time
+        //++ nombre exécutions & time
+        MainStruct *s = sshmat(shid);
+        StructProgram prog = s->structProgram[clientMsg.num];
         prog.numberOfExecutions ++;
         prog.time += executionTime;
-        s->structProgram[clientMsg.num] = prog;
         sem_up0(sid);
         serverMsg.state = 1;
       }
@@ -219,8 +206,8 @@ void socketHandler(void* arg1) {
     }
       serverMsg.num = clientMsg.num;
       nwrite(newsockfd, &serverMsg,sizeof(serverMsg));
-      //if(dupFd != -1)
-        //sclose(dupFd);
+      if(dupFd != -1)
+        sclose(dupFd);
     }
 
 
