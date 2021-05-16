@@ -195,8 +195,7 @@ void recurExec(void *arg1) {
 	int nbProgs = 0;
 	
 	// close write
-	int ret = close(pipefd[1]);
-	checkNeg(ret, "close error");
+	sclose(pipefd[1]);
 
 	// read pipe
 	while(sread(pipefd[0], &num, sizeof(int)) > 0){
