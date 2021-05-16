@@ -14,7 +14,6 @@
 #define BACKLOG 5
 #define PATHSIZE 25
 #define PROG_NAME_SIZE 5 
-#define BUFFERSIZE 300
 
 // PRE:  arg1: the number of prog to be compiled
 //       arg2: pipe
@@ -22,7 +21,6 @@
 //       with the prog number
 //       on failure, EXIT_FAILURE
 void compilHandler(void* arg1,void* arg2){
-
   char *numProg = (char*) arg1;
   int *pipefd = arg2; 
 
@@ -65,12 +63,12 @@ void execHandler(void* arg1,void* arg2){
 //      pipefd : pipe
 // POST: read and return the text sent through the socket
 void sendMessage(int *pipefd,int sockfd) {
-  char buffer[10];
-  int n = sread(pipefd[0],buffer,10 * sizeof(char));
+  char buffer[BUFFERSIZE];
+  int n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
   while(n > 0){
     printf("buffer = %s\n",buffer);
     nwrite(sockfd,buffer,n * sizeof(char));
-    n = sread(pipefd[0],buffer,10 * sizeof(char));
+    n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
   }
 }
 
@@ -81,7 +79,6 @@ void sendMessage(int *pipefd,int sockfd) {
 // POST: on success generate the file in ./CodeDirectory with the prog number
 //       on failure, print Error OPEN.
 void readDataAndSave(int num, int sockfd){
-
   char path[PATHSIZE] = "./CodeDirectory/";
   char number[PROG_NAME_SIZE];
   sprintf(number,"%d",num);
@@ -90,11 +87,11 @@ void readDataAndSave(int num, int sockfd){
   strcat(path,".c");
   int fd = sopen(path, O_WRONLY | O_TRUNC | O_CREAT, PERM);
  
-  char buffer[10];
-  int n = sread(sockfd,buffer,10 * sizeof(char));
+  char buffer[BUFFERSIZE];
+  int n = sread(sockfd,buffer,BUFFERSIZE * sizeof(char));
   while(n > 0){
     nwrite(fd,buffer,n * sizeof(char));
-    n = sread(sockfd,buffer,10 * sizeof(char));
+    n = sread(sockfd,buffer,BUFFERSIZE * sizeof(char));
   }
   sclose(fd);
 }
@@ -105,22 +102,18 @@ void readDataAndSave(int num, int sockfd){
 // POST: on success, sends the client a success message.
 //       on failure, sends the client an error message.
 void compilation(int num, int sockfd, StructProgram *prog){
-  printf("JE SUIS DANS COMPIL \n");
   CommunicationServerClient serverMsg;
   serverMsg.num = num;
   char numChar[PROG_NAME_SIZE];
   sprintf(numChar, "%d", num);
   
-
   int pipefd[2];
   spipe(pipefd);
-
 
   void *numProg = &numChar;
   
   pid_t pidCompil = fork_and_run2(compilHandler,numProg,pipefd);
   sclose(pipefd[1]);
-
 
   int status;
   swaitpid(pidCompil,&status,0);
@@ -129,7 +122,6 @@ void compilation(int num, int sockfd, StructProgram *prog){
     //Error 
     serverMsg.state = -1;
     prog->errorCompil = true;
-    sendMessage(pipefd,sockfd);
   }else{
     //Good
     serverMsg.state = 0;
@@ -138,8 +130,9 @@ void compilation(int num, int sockfd, StructProgram *prog){
   
   nwrite(sockfd, &serverMsg,sizeof(serverMsg));
 
-
-
+  if(WEXITSTATUS (status) != 0){
+    sendMessage(pipefd,sockfd);
+  }
 
   sclose(pipefd[0]);
 }

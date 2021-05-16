@@ -1,6 +1,8 @@
 #ifndef COMMUNICATIONS_H
 #define COMMUNICATIONS_H
 
+#define BUFFERSIZE 300
+
 typedef struct {
     int num;
     int nbCharFilename;

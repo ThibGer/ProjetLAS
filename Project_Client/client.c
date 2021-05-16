@@ -9,7 +9,7 @@
 #include "../utils_v10.h"
 #include "../communications.h"
 
-#define BUFFERSIZE 300
+#define NBPROGS_RECUREXEC 100
 
 volatile sig_atomic_t end = 0;
 int port;
@@ -50,11 +50,11 @@ void readServerMessage(int sockfd) {
 void uploadFile(int sockfd, char* filePath){
   int fd = sopen(filePath,O_RDONLY,0100);
 
-  char buffer[10];
-  int n = sread(fd,buffer,10 * sizeof(char));
+  char buffer[BUFFERSIZE];
+  int n = sread(fd,buffer,BUFFERSIZE * sizeof(char));
   while(n > 0){
     swrite(sockfd,buffer,n * sizeof(char));
-    n = sread(fd,buffer,10 * sizeof(char));
+    n = sread(fd,buffer,BUFFERSIZE * sizeof(char));
   }
   int s = shutdown(sockfd,SHUT_WR); 
   checkNeg(s, "ERROR SHUTDOWN");
@@ -94,6 +94,7 @@ void addFile(char* filePath) {
 	}
 	printf("\n----------------------------------------------- \n\n");
 	
+	sclose(sockfd);
 }
 
 
@@ -125,6 +126,8 @@ void replaceFile(int num, char* filePath) {
 		readServerMessage(sockfd);	
 	}
 	printf("\n----------------------------------------------- \n\n");
+
+	sclose(sockfd);
 }
 
 
@@ -150,9 +153,9 @@ void execProg(int num) {
 		printf("   Sortie standard: \n\n");		
 		readServerMessage(sockfd);	
 	}
-
-	
 	printf("\n-----------------------------------------------\n");
+
+	sclose(sockfd);
 }
 
 
@@ -188,7 +191,7 @@ void recurExec(void *arg1) {
 	int *pipefd = arg1;
 
 	int num;
-	int progs[100];
+	int progs[NBPROGS_RECUREXEC];
 	int nbProgs = 0;
 	
 	// close write
