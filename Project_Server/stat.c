@@ -16,9 +16,7 @@ int main (int argc, char *argv[]) {
 
 	int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
 	int sid = sem_get(SEM_KEY, 1);
-	printf("sid %d\n",sid);
 	sem_down0(sid);
-	printf("je suis passé\n");
  	MainStruct *s = sshmat(shid);
  	StructProgram prog = s->structProgram[atoi(argv[1])];
 
