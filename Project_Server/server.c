@@ -156,6 +156,10 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   sem_up0(sid);
 }
 
+// PRE: arg1 : a void pointer of a name of an executable
+// POST: execute the program
+// RES:  return exit code of program in case of success
+//       or EXIT_FAILURE code in case of failure
 void execHandler(void* arg1){
   char *progName = (char *)arg1;
   chdir("./CodeDirectory");
@@ -163,6 +167,10 @@ void execHandler(void* arg1){
   exit(EXIT_FAILURE);
 }
 
+// PRE: serverMsg : a pointer of CommunicationServerClient struct
+//      newsockfd : a valid client socket
+// POST: set executionTime and returnCode to -1
+//       write empty string on client socket
 void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockfd){
     serverMsg->executionTime = -1;
     serverMsg->returnCode = -1;
@@ -170,6 +178,8 @@ void progNotExistOrNotCompile(CommunicationServerClient* serverMsg, int newsockf
     nwrite(newsockfd,fileDoesntExist,sizeof(fileDoesntExist));
 }
 
+// PRE: arg1 : a void pointer of a client sokcket
+// POST: write a server msg on client socket
 void socketHandler(void* arg1) {
   //Get shared memory
   int shid = sshmget(SHARED_MEMORY_KEY, sizeof(MainStruct), 0);
