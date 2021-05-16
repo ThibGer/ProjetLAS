@@ -149,8 +149,6 @@ void compilation(int num, int sockfd, StructProgram *prog){
     //Good
     serverMsg.state = 0;
     prog->errorCompil = false;
-    char error[1] = "";
-    nwrite(sockfd,error,sizeof(error));
   }
   
   swrite(sockfd, &serverMsg,sizeof(serverMsg));
