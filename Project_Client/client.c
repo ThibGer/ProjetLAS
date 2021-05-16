@@ -239,13 +239,13 @@ int main(int argc, char **argv){
 	//close read
 	sclose(pipefd[0]);
 
+	printf("Entrez une commande ou q pour quitter\n");
 	/* read on stdin */
 	char bufRd[BUFFERSIZE];
 	int nbCharRd = sread(0, bufRd, BUFFERSIZE);
 	char command = bufRd[0];
 	bufRd[nbCharRd-1] = '\0';
 	char* param = bufRd+2;
-
 	/* prompt */
 	while(command != 'q') {
 		/* add a C file to the server */
