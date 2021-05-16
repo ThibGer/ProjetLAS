@@ -88,9 +88,6 @@ void addFile(char* filePath) {
 	//upload and send the file
 	uploadFile(sockfd, filePath);
 
-	char stdoutMsg[800];
-	sread(sockfd,&stdoutMsg,sizeof(stdoutMsg));
-	
 	CommunicationServerClient serverMsg;
 	sread(sockfd,&serverMsg,sizeof(serverMsg));
 	char* errorMessage = readMessage(sockfd);

@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
 #include "ipc_conf.h"
 #include "../utils_v10.h"
 #include "../communications.h"
