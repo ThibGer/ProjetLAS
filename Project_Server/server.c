@@ -66,7 +66,6 @@ void sendMessage(int *pipefd,int sockfd) {
   char buffer[BUFFERSIZE];
   int n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
   while(n > 0){
-    printf("buffer = %s\n",buffer);
     nwrite(sockfd,buffer,n * sizeof(char));
     n = sread(pipefd[0],buffer,BUFFERSIZE * sizeof(char));
   }
@@ -274,15 +273,12 @@ void socketHandler(void* arg1) {
   sread(newsockfd,&clientMsg,sizeof(clientMsg));
   //Add file (+)
   if(clientMsg.num == -1 && clientMsg.nbCharFilename != -1){
-    printf("ADD FILE\n");
     createFile(newsockfd,clientMsg,shid);
   //Replace file (.)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename != -1){
-    printf("On Remplace\n");
     replaceFile(newsockfd,clientMsg,shid);
   //Execute file (*,@)
   } else if (clientMsg.num != -1 && clientMsg.nbCharFilename == -1){
-    printf("On execute\n");
     execFile(newsockfd,clientMsg,shid);
   }
   int s = shutdown(newsockfd,SHUT_WR); 
