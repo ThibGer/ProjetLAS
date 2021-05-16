@@ -201,6 +201,7 @@ void replaceFile(int sockfd,CommunicationClientServer clientMsg, int shid){
   
   compilation(clientMsg.num,sockfd,&prog);
 
+  s->structProgram[clientMsg.num] = prog;
 
   sshmdt(s);
   sem_up0(sid);
