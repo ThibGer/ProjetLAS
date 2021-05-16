@@ -17,7 +17,7 @@ char* addr;
 
 
 
-// PRE: ServierIP : a valid IP address
+// PRE: ServerIP : a valid IP address
 //      ServerPort : a valid port number
 // POST: on success connects a client socket to ServerIP:port
 //       return socket file descriptor
